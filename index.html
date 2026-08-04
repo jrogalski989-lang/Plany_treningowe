@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- NAGŁÓWKI ANTI-CACHE (BLOKOWANIE PAMIĘCI PODRĘCZNEJ SAFARI/CHROME) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>Plany Treningowe</title>
     <style>
         /* GŁÓWNE STYLE - ZMIANA NA JASNE */
@@ -14,12 +20,31 @@
             padding: 16px; 
         }
 
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
         h1 { 
-            text-align: center; 
-            font-size: 22px; 
-            margin-bottom: 20px; 
+            font-size: 20px; 
+            margin: 0; 
             color: #2e7d32; /* Ciemniejszy zielony, lepiej widoczny na białym */
         }
+
+        /* PRZYCISK WYMUSZONEGO ODŚWIEŻENIA */
+        .refresh-btn {
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #333;
+        }
+        .refresh-btn:active { background: #bbb; }
 
         .grid { display: flex; flex-direction: column; gap: 12px; }
 
@@ -93,7 +118,11 @@
 </head>
 <body>
 
-    <h1>🏋️ Moje Plany Treningowe</h1>
+    <div class="header-container">
+        <h1>🏋️ Moje Plany Treningowe</h1>
+        <button class="refresh-btn" onclick="forceRefresh()">🔄 Odśwież</button>
+    </div>
+
     <div class="grid" id="planList"></div>
 
     <div class="modal" id="pdfModal">
@@ -130,6 +159,10 @@
             document.getElementById('pdfModal').style.display = 'none';
             document.getElementById('pdfFrame').src = '';
         }
+
+        // WYMUSZONE ODŚWIEŻANIE STRONY DLA IPHONE / CHROME
+        function forceRefresh() {
+            window.location.reload(true);
+        }
     </script>
 </body>
-</html>
