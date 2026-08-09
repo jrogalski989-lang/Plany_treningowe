@@ -187,10 +187,11 @@
     <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
 
     <script>
+        // PAMIĘTAJ: Każdy tydzień musi mieć UNIKALNE ID (np. week_1708, week_1008, week_0408)
         const plans = [
-            { id: "week_0308", week: "Tydzień 17.08 - 23.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" },
+            { id: "week_1708", week: "Tydzień 17.08 - 23.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" },
             { id: "week_1008", week: "Tydzień 10.08 - 16.08", url: "https://drive.google.com/file/d/1hYGXivHinwIpCMWCDC0pESePvVgAahC0/preview" },
-            { id: "week_0308", week: "Tydzień 04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
+            { id: "week_0408", week: "Tydzień 04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
         ];
 
         const savedStatuses = JSON.parse(localStorage.getItem('training_status') || '{}');
@@ -266,7 +267,311 @@
             reader.readAsDataURL(file);
         }
 
-        // Nowa funkcja do usuwania zdjęcia
+        function deletePhoto(planId) {
+            if (confirm("Czy na pewno chcesz usunąć to zdjęcie?")) {
+                delete savedPhotos[planId];
+                localStorage.setItem('training_photos', JSON.stringify(savedPhotos));
+                renderPlans();
+            }
+        }
+
+        function openPdf(url, title) {
+            document.getElementById('pdfFrame').src = url;
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('pdfModal').style.display = 'flex';
+        }
+
+        function closePdf() {
+            document.getElementById('pdfModal').style.display = 'none';
+            document.getElementById('pdfFrame').src = '';
+        }
+
+        function openPhoto(photoSrc) {
+            document.getElementById('fullPhotoImg').src = photoSrc;
+            document.getElementById('photoModal').style.display = 'flex';
+        }
+
+        function closePhoto() {
+            document.getElementById('photoModal').style.display = 'none';
+            document.getElementById('fullPhotoImg').src = '';
+        }
+
+        function forceRefresh() {
+            window.location.reload(true);
+        }
+
+        renderPlans();
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Plany Treningowe</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #ffffff; 
+            color: #000000; 
+            margin: 0; 
+            padding: 16px; 
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h1 { font-size: 20px; margin: 0; color: #2e7d32; }
+
+        .refresh-btn {
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .grid { display: flex; flex-direction: column; gap: 16px; }
+
+        .card { 
+            background: #f5f5f5; 
+            border: 1px solid #e0e0e0; 
+            color: #000000; 
+            padding: 16px; 
+            border-radius: 12px; 
+            display: flex; 
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+        }
+
+        .card.completed {
+            background: #e8f5e9;
+            border-color: #a5d6a7;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #ffffff;
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn.done {
+            background: #4CAF50;
+            color: white;
+            border-color: #388E3C;
+        }
+
+        .btn.delete {
+            background: #ffebee;
+            color: #c62828;
+            border-color: #ef9a9a;
+        }
+
+        /* Sekcja zdjęć */
+        .photo-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .photo-preview {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #aaa;
+        }
+
+        /* Modal ogólny */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); 
+            flex-direction: column; 
+            z-index: 1000;
+        }
+
+        .modal-header { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 16px; 
+            background: #ffffff; 
+            color: #000000; 
+            align-items: center; 
+        }
+
+        .close-btn { 
+            background: #d32f2f; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
+
+        iframe { width: 100%; height: 100%; border: none; background: white; }
+
+        .full-photo {
+            max-width: 100%;
+            max-height: 80vh;
+            margin: auto;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>🏋️ Moje Plany Treningowe</h1>
+        <button class="refresh-btn" onclick="forceRefresh()">🔄 Odśwież</button>
+    </div>
+
+    <div class="grid" id="planList"></div>
+
+    <!-- Modal PDF -->
+    <div class="modal" id="pdfModal">
+        <div class="modal-header">
+            <span id="modalTitle">Podgląd Planu</span>
+            <button class="close-btn" onclick="closePdf()">Zamknij ✖</button>
+        </div>
+        <iframe id="pdfFrame" src=""></iframe>
+    </div>
+
+    <!-- Modal Zdjęcia -->
+    <div class="modal" id="photoModal">
+        <div class="modal-header">
+            <span>Zdjęcie Progresu</span>
+            <button class="close-btn" onclick="closePhoto()">Zamknij ✖</button>
+        </div>
+        <img id="fullPhotoImg" class="full-photo" src="" alt="Zdjęcie progresu">
+    </div>
+
+    <!-- Ukryty input do plików -->
+    <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+
+    <script>
+        // PAMIĘTAJ: Każdy tydzień musi mieć UNIKALNE ID (np. week_1708, week_1008, week_0408)
+        const plans = [
+            { id: "week_1708", week: "Tydzień 17.08 - 23.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" },
+            { id: "week_1008", week: "Tydzień 10.08 - 16.08", url: "https://drive.google.com/file/d/1hYGXivHinwIpCMWCDC0pESePvVgAahC0/preview" },
+            { id: "week_0408", week: "Tydzień 04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
+        ];
+
+        const savedStatuses = JSON.parse(localStorage.getItem('training_status') || '{}');
+        const savedPhotos = JSON.parse(localStorage.getItem('training_photos') || '{}');
+        let currentActivePlanId = null;
+
+        const container = document.getElementById('planList');
+        
+        function renderPlans() {
+            container.innerHTML = '';
+            plans.forEach(plan => {
+                const isCompleted = savedStatuses[plan.id] === true;
+                const photoData = savedPhotos[plan.id];
+
+                const card = document.createElement('div');
+                card.className = `card ${isCompleted ? 'completed' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-title" onclick="openPdf('${plan.url}', '${plan.week}')">📅 ${plan.week}</span>
+                        <button class="btn ${isCompleted ? 'done' : ''}" onclick="toggleStatus('${plan.id}')">
+                            ${isCompleted ? 'Zakończony ✅' : 'W trakcie ⏳'}
+                        </button>
+                    </div>
+                    <div class="photo-section">
+                        ${photoData ? 
+                            `<img src="${photoData}" class="photo-preview" onclick="openPhoto('${photoData}')">
+                             <button class="btn" onclick="triggerFileInput('${plan.id}')">🔄 Zmień</button>
+                             <button class="btn delete" onclick="deletePhoto('${plan.id}')">🗑️ Usuń</button>` : 
+                            `<button class="btn" onclick="triggerFileInput('${plan.id}')">📷 Dodaj zdjęcie progresu</button>`
+                        }
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleStatus(planId) {
+            savedStatuses[planId] = !savedStatuses[planId];
+            localStorage.setItem('training_status', JSON.stringify(savedStatuses));
+            renderPlans();
+        }
+
+        function triggerFileInput(planId) {
+            currentActivePlanId = planId;
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    const resizedImage = canvas.toDataURL('image/jpeg', 0.7);
+                    savedPhotos[currentActivePlanId] = resizedImage;
+                    localStorage.setItem('training_photos', JSON.stringify(savedPhotos));
+                    renderPlans();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
         function deletePhoto(planId) {
             if (confirm("Czy na pewno chcesz usunąć to zdjęcie?")) {
                 delete savedPhotos[planId];
