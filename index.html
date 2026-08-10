@@ -470,19 +470,19 @@
                         <div class="photo-block">
                             ${photoData ? 
                                 `<img src="${photoData}" class="photo-preview" onclick="openPhoto('${photoData}')">
-                                 <button class="btn" onclick="triggerFileInput('${plan.id}', 'progress')">🔄 Zmień silę</button>
+                                 <button class="btn" onclick="triggerFileInput('${plan.id}', 'progress')">🔄 Zmień</button>
                                  <button class="btn delete" onclick="deletePhoto('${plan.id}', 'progress')">🗑️</button>` : 
                                 `<button class="btn" onclick="triggerFileInput('${plan.id}', 'progress')">📷 Zdjęcie progresu</button>`
                             }
                         </div>
 
-                        <!-- Zdjęcie z Wagi (Niedziela) -->
+                        <!-- Zdjęcie z Wagi -->
                         <div class="photo-block">
                             ${weightPhotoData ? 
                                 `<img src="${weightPhotoData}" class="photo-preview" onclick="openPhoto('${weightPhotoData}')">
                                  <button class="btn" onclick="triggerFileInput('${plan.id}', 'weight')">🔄 Zmień wagę</button>
                                  <button class="btn delete" onclick="deletePhoto('${plan.id}', 'weight')">🗑️</button>` : 
-                                `<button class="btn" onclick="triggerFileInput('${plan.id}', 'weight')">⚖️ Zdjęcie z wagi (Niedziela)</button>`
+                                `<button class="btn" onclick="triggerFileInput('${plan.id}', 'weight')">⚖️ Waga</button>`
                             }
                         </div>
                     </div>
