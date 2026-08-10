@@ -90,11 +90,11 @@
             border-color: #ef9a9a;
         }
 
-        .btn.save-note {
-            background: #e3f2fd;
-            color: #1565c0;
-            border-color: #90caf9;
-            align-self: flex-end;
+        .btn.add-exercise {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-color: #a5d6a7;
+            font-weight: bold;
         }
 
         .photo-section {
@@ -159,20 +159,60 @@
             background: #e3f2fd;
         }
 
-        /* Pole edycji notatki dziennej */
+        /* PANEL WYBORU ĆWICZEŃ I NOTATKI */
         .day-note-container {
             display: none;
             flex-direction: column;
-            gap: 6px;
+            gap: 10px;
             background: #ffffff;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid #ddd;
         }
 
+        .exercise-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            background: #f9f9f9;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+
+        .exercise-select, .weight-input, .reps-input {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .exercise-select { flex-grow: 1; }
+        .weight-input { width: 60px; }
+        .reps-input { width: 50px; }
+
+        .exercise-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .exercise-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f8e9;
+            border: 1px solid #c8e6c9;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
         .notes-input {
             width: 100%;
-            height: 70px;
+            height: 50px;
             border: 1px solid #ccc;
             border-radius: 6px;
             padding: 8px;
@@ -260,9 +300,25 @@
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
-        let cloudData = { statuses: {}, photos: {}, dailyNotes: {} };
+        // BAZA DEDYKOWANYCH ĆWICZEŃ DO WYBORU (Możesz tu dopisać swoje ćwiczenia)
+        const exerciseOptions = [
+            "Wyciskanie sztangi na ławce poziomej",
+            "Wyciskanie hantli na skosie dodatnim",
+            "Przysiad ze sztangą",
+            "Martwy ciąg",
+            "Wiosłowanie sztangą",
+            "Podciąganie na drążku",
+            "Wyciskanie żołnierskie (OHP)",
+            "Uginanie ramion ze sztangą (Biceps)",
+            "Prostowanie ramion na wyciągu (Triceps)",
+            "Wznosy bokiem z hantlami (Barki)",
+            "Wspięcia na palce (Łydki)",
+            "Brzuszki / Allahy"
+        ];
+
+        let cloudData = { statuses: {}, photos: {}, dailyNotes: {}, dailyExercises: {} };
         let currentActivePlanId = null;
-        let activeDayKey = {}; // Zapamiętuje otwarty dzień w kafelku
+        let activeDayKey = {};
 
         async function loadCloudData() {
             try {
@@ -272,7 +328,8 @@
                     cloudData = {
                         statuses: data.statuses || {},
                         photos: data.photos || {},
-                        dailyNotes: data.dailyNotes || {}
+                        dailyNotes: data.dailyNotes || {},
+                        dailyExercises: data.dailyExercises || {}
                     };
                 }
                 renderPlans();
@@ -305,23 +362,39 @@
                 const card = document.createElement('div');
                 card.className = `card ${isCompleted ? 'completed' : ''}`;
                 
-                // Generowanie przycisków dni
                 let daysHtml = '';
                 daysOfWeek.forEach(day => {
                     const hasNote = cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][day];
+                    const hasEx = cloudData.dailyExercises && cloudData.dailyExercises[plan.id] && cloudData.dailyExercises[plan.id][day] && cloudData.dailyExercises[plan.id][day].length > 0;
+                    
                     const isSelected = selectedDay === day;
                     
                     let btnClass = 'day-btn';
                     if (isSelected) btnClass += ' active';
-                    else if (hasNote) btnClass += ' has-note';
+                    else if (hasNote || hasEx) btnClass += ' has-note';
 
                     daysHtml += `<button class="${btnClass}" onclick="toggleDay('${plan.id}', '${day}')">
-                        ${hasNote && !isSelected ? '📝 ' : ''}${day}
+                        ${(hasNote || hasEx) && !isSelected ? '📝 ' : ''}${day}
                     </button>`;
                 });
 
-                // Treść wybranej notatki dziennej
+                // Pobieranie wpisanych danych dla wybranego dnia
                 const currentDayNote = (selectedDay && cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][selectedDay]) || '';
+                const currentExercises = (selectedDay && cloudData.dailyExercises && cloudData.dailyExercises[plan.id] && cloudData.dailyExercises[plan.id][selectedDay]) || [];
+
+                // Generowanie listy dodanych ćwiczeń
+                let exercisesListHtml = '';
+                currentExercises.forEach((ex, index) => {
+                    exercisesListHtml += `
+                        <div class="exercise-item">
+                            <span>💪 <strong>${ex.name}</strong>: ${ex.weight} kg × ${ex.reps} powt.</span>
+                            <button class="btn delete" onclick="removeExercise('${plan.id}', '${selectedDay}', ${index})">✕</button>
+                        </div>
+                    `;
+                });
+
+                // Generowanie opcji wyboru ćwiczeń do listy
+                let exerciseSelectOptions = exerciseOptions.map(ex => `<option value="${ex}">${ex}</option>`).join('');
 
                 card.innerHTML = `
                     <div class="card-header">
@@ -345,8 +418,27 @@
                         <div class="days-grid">${daysHtml}</div>
                         
                         <div class="day-note-container" id="noteBox_${plan.id}" style="display: ${selectedDay ? 'flex' : 'none'};">
-                            <strong>✏️ Notatka na ${selectedDay}:</strong>
-                            <textarea id="noteInput_${plan.id}" class="notes-input" placeholder="Wpisz ciężary, powtórzenia i samopoczucie na ten dzień...">${currentDayNote}</textarea>
+                            <strong>🏋️ Trening w: ${selectedDay}</strong>
+                            
+                            <!-- Formularz dodawania ćwiczenia -->
+                            <div class="exercise-form">
+                                <select id="exSelect_${plan.id}" class="exercise-select">
+                                    ${exerciseSelectOptions}
+                                </select>
+                                <input type="number" id="exWeight_${plan.id}" class="weight-input" placeholder="kg">
+                                <input type="number" id="exReps_${plan.id}" class="reps-input" placeholder="powt">
+                                <button class="btn add-exercise" onclick="addExercise('${plan.id}', '${selectedDay}')">➕ Dodaj</button>
+                            </div>
+
+                            <!-- Lista wykonać w danym dniu -->
+                            <div class="exercise-list">
+                                ${exercisesListHtml}
+                            </div>
+
+                            <hr style="border: none; border-top: 1px solid #eee; margin: 4px 0;">
+
+                            <label for="noteInput_${plan.id}" style="font-size:12px; font-weight:bold; color:#555;">📝 Uwagi do dnia:</label>
+                            <textarea id="noteInput_${plan.id}" class="notes-input" placeholder="Wpisz ogólne samopoczucie, ból stawów...">${currentDayNote}</textarea>
                             <button class="btn save-note" onclick="saveDayNote('${plan.id}', '${selectedDay}')">💾 Zapisz dla: ${selectedDay}</button>
                         </div>
                     </div>
@@ -357,11 +449,34 @@
 
         function toggleDay(planId, day) {
             if (activeDayKey[planId] === day) {
-                delete activeDayKey[planId]; // Ukryj, jeśli kliknięto ponownie ten sam dzień
+                delete activeDayKey[planId];
             } else {
-                activeDayKey[planId] = day; // Otwórz wybrany dzień
+                activeDayKey[planId] = day;
             }
             renderPlans();
+        }
+
+        async function addExercise(planId, day) {
+            const name = document.getElementById(`exSelect_${planId}`).value;
+            const weight = document.getElementById(`exWeight_${planId}`).value || 0;
+            const reps = document.getElementById(`exReps_${planId}`).value || 0;
+
+            if (!cloudData.dailyExercises) cloudData.dailyExercises = {};
+            if (!cloudData.dailyExercises[planId]) cloudData.dailyExercises[planId] = {};
+            if (!cloudData.dailyExercises[planId][day]) cloudData.dailyExercises[planId][day] = [];
+
+            cloudData.dailyExercises[planId][day].push({ name, weight, reps });
+
+            renderPlans();
+            await saveCloudData();
+        }
+
+        async function removeExercise(planId, day, index) {
+            if (cloudData.dailyExercises && cloudData.dailyExercises[planId] && cloudData.dailyExercises[planId][day]) {
+                cloudData.dailyExercises[planId][day].splice(index, 1);
+                renderPlans();
+                await saveCloudData();
+            }
         }
 
         async function saveDayNote(planId, day) {
