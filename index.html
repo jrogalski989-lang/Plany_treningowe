@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <title>Plany Treningowe</title>
+    <title>Plany Treningowe (Cloud)</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
@@ -97,7 +97,6 @@
             align-self: flex-end;
         }
 
-        /* Sekcja zdjęć */
         .photo-section {
             display: flex;
             align-items: center;
@@ -116,7 +115,6 @@
             border: 1px solid #aaa;
         }
 
-        /* Sekcja notatek */
         .notes-section {
             display: flex;
             flex-direction: column;
@@ -139,11 +137,10 @@
             padding: 8px;
             font-family: inherit;
             font-size: 13px;
-            box-sizing: border-border;
+            box-sizing: border-box;
             resize: vertical;
         }
 
-        /* Modale */
         .modal { 
             display: none; 
             position: fixed; 
@@ -187,12 +184,12 @@
 
     <div class="header-container">
         <h1>🏋️ Moje Plany Treningowe</h1>
-        <button class="refresh-btn" onclick="forceRefresh()">🔄 Odśwież</button>
+        <button class="refresh-btn" onclick="loadCloudData()">🔄 Odśwież</button>
     </div>
 
     <div class="grid" id="planList"></div>
 
-    <!-- Modal PDF -->
+    <!-- Modale -->
     <div class="modal" id="pdfModal">
         <div class="modal-header">
             <span id="modalTitle">Podgląd Planu</span>
@@ -201,7 +198,6 @@
         <iframe id="pdfFrame" src=""></iframe>
     </div>
 
-    <!-- Modal Zdjęcia -->
     <div class="modal" id="photoModal">
         <div class="modal-header">
             <span>Zdjęcie Progresu</span>
@@ -210,29 +206,60 @@
         <img id="fullPhotoImg" class="full-photo" src="" alt="Zdjęcie progresu">
     </div>
 
-    <!-- Ukryty input do plików -->
     <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
 
     <script>
+        // ADRES TWOJEJ BAZY DANYCH FIREBASE:
+        const FIREBASE_URL = "https://plan-treningowy-efc6d-default-rtdb.firebaseio.com/";
+
         const plans = [
             { id: "week_1708", week: "Tydzień 17.08 - 23.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" },
             { id: "week_1008", week: "Tydzień 10.08 - 16.08", url: "https://drive.google.com/file/d/1hYGXivHinwIpCMWCDC0pESePvVgAahC0/preview" },
             { id: "week_0408", week: "Tydzień 04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
         ];
 
-        const savedStatuses = JSON.parse(localStorage.getItem('training_status') || '{}');
-        const savedPhotos = JSON.parse(localStorage.getItem('training_photos') || '{}');
-        const savedNotes = JSON.parse(localStorage.getItem('training_notes') || '{}');
+        let cloudData = { statuses: {}, photos: {}, notes: {} };
         let currentActivePlanId = null;
 
-        const container = document.getElementById('planList');
-        
+        // Pobieranie danych z bazy Firebase
+        async function loadCloudData() {
+            try {
+                const response = await fetch(`${FIREBASE_URL}/data.json`);
+                const data = await response.json();
+                if (data) {
+                    cloudData = {
+                        statuses: data.statuses || {},
+                        photos: data.photos || {},
+                        notes: data.notes || {}
+                    };
+                }
+                renderPlans();
+            } catch (error) {
+                console.error("Błąd pobierania z bazy:", error);
+            }
+        }
+
+        // Zapisywanie danych do bazy Firebase
+        async function saveCloudData() {
+            try {
+                await fetch(`${FIREBASE_URL}/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cloudData)
+                });
+            } catch (error) {
+                console.error("Błąd zapisu do bazy:", error);
+            }
+        }
+
         function renderPlans() {
+            const container = document.getElementById('planList');
             container.innerHTML = '';
+
             plans.forEach(plan => {
-                const isCompleted = savedStatuses[plan.id] === true;
-                const photoData = savedPhotos[plan.id];
-                const noteText = savedNotes[plan.id] || '';
+                const isCompleted = cloudData.statuses && cloudData.statuses[plan.id] === true;
+                const photoData = cloudData.photos && cloudData.photos[plan.id];
+                const noteText = (cloudData.notes && cloudData.notes[plan.id]) || '';
 
                 const card = document.createElement('div');
                 card.className = `card ${isCompleted ? 'completed' : ''}`;
@@ -264,17 +291,19 @@
             });
         }
 
-        function toggleStatus(planId) {
-            savedStatuses[planId] = !savedStatuses[planId];
-            localStorage.setItem('training_status', JSON.stringify(savedStatuses));
+        async function toggleStatus(planId) {
+            if (!cloudData.statuses) cloudData.statuses = {};
+            cloudData.statuses[planId] = !cloudData.statuses[planId];
             renderPlans();
+            await saveCloudData();
         }
 
-        function saveNote(planId) {
+        async function saveNote(planId) {
             const noteContent = document.getElementById(`note_${planId}`).value;
-            savedNotes[planId] = noteContent;
-            localStorage.setItem('training_notes', JSON.stringify(savedNotes));
-            alert("Notatka została zapisana! 📝");
+            if (!cloudData.notes) cloudData.notes = {};
+            cloudData.notes[planId] = noteContent;
+            await saveCloudData();
+            alert("Notatka zapisana w chmurze! ☁️");
         }
 
         function triggerFileInput(planId) {
@@ -290,9 +319,9 @@
             reader.onload = function(e) {
                 const img = new Image();
                 img.src = e.target.result;
-                img.onload = function() {
+                img.onload = async function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
+                    const MAX_WIDTH = 600;
                     const scaleSize = MAX_WIDTH / img.width;
                     canvas.width = MAX_WIDTH;
                     canvas.height = img.height * scaleSize;
@@ -300,20 +329,22 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                    const resizedImage = canvas.toDataURL('image/jpeg', 0.7);
-                    savedPhotos[currentActivePlanId] = resizedImage;
-                    localStorage.setItem('training_photos', JSON.stringify(savedPhotos));
+                    const resizedImage = canvas.toDataURL('image/jpeg', 0.6);
+                    if (!cloudData.photos) cloudData.photos = {};
+                    cloudData.photos[currentActivePlanId] = resizedImage;
+                    
                     renderPlans();
+                    await saveCloudData();
                 }
             };
             reader.readAsDataURL(file);
         }
 
-        function deletePhoto(planId) {
-            if (confirm("Czy na pewno chcesz usunąć to zdjęcie?")) {
-                delete savedPhotos[planId];
-                localStorage.setItem('training_photos', JSON.stringify(savedPhotos));
+        async function deletePhoto(planId) {
+            if (confirm("Czy na pewno chcesz usunąć to zdjęcie z chmury?")) {
+                if (cloudData.photos) delete cloudData.photos[planId];
                 renderPlans();
+                await saveCloudData();
             }
         }
 
@@ -338,11 +369,8 @@
             document.getElementById('fullPhotoImg').src = '';
         }
 
-        function forceRefresh() {
-            window.location.reload(true);
-        }
-
-        renderPlans();
+        // Start – wczytanie danych po otwarciu strony
+        loadCloudData();
     </script>
 </body>
 </html>
