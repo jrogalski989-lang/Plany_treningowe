@@ -115,23 +115,64 @@
             border: 1px solid #aaa;
         }
 
-        .notes-section {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+        /* SEKCJA DNI TYGODNIA */
+        .days-section {
             border-top: 1px dashed #ccc;
             padding-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        .notes-section label {
-            font-size: 12px;
+        .days-title {
+            font-size: 13px;
             font-weight: bold;
-            color: #555;
+            color: #444;
+        }
+
+        .days-grid {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .day-btn {
+            background: #ffffff;
+            border: 1px solid #bbb;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .day-btn.active {
+            background: #2196F3;
+            color: white;
+            border-color: #1976D2;
+        }
+
+        .day-btn.has-note {
+            border-color: #2196F3;
+            color: #1565c0;
+            background: #e3f2fd;
+        }
+
+        /* Pole edycji notatki dziennej */
+        .day-note-container {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            background: #ffffff;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
         }
 
         .notes-input {
             width: 100%;
-            height: 60px;
+            height: 70px;
             border: 1px solid #ccc;
             border-radius: 6px;
             padding: 8px;
@@ -209,7 +250,6 @@
     <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
 
     <script>
-        // ADRES TWOJEJ BAZY DANYCH FIREBASE:
         const FIREBASE_URL = "https://plan-treningowy-efc6d-default-rtdb.firebaseio.com/";
 
         const plans = [
@@ -218,10 +258,12 @@
             { id: "week_0408", week: "Tydzień 04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
         ];
 
-        let cloudData = { statuses: {}, photos: {}, notes: {} };
-        let currentActivePlanId = null;
+        const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
-        // Pobieranie danych z bazy Firebase
+        let cloudData = { statuses: {}, photos: {}, dailyNotes: {} };
+        let currentActivePlanId = null;
+        let activeDayKey = {}; // Zapamiętuje otwarty dzień w kafelku
+
         async function loadCloudData() {
             try {
                 const response = await fetch(`${FIREBASE_URL}/data.json`);
@@ -230,7 +272,7 @@
                     cloudData = {
                         statuses: data.statuses || {},
                         photos: data.photos || {},
-                        notes: data.notes || {}
+                        dailyNotes: data.dailyNotes || {}
                     };
                 }
                 renderPlans();
@@ -239,7 +281,6 @@
             }
         }
 
-        // Zapisywanie danych do bazy Firebase
         async function saveCloudData() {
             try {
                 await fetch(`${FIREBASE_URL}/data.json`, {
@@ -259,11 +300,29 @@
             plans.forEach(plan => {
                 const isCompleted = cloudData.statuses && cloudData.statuses[plan.id] === true;
                 const photoData = cloudData.photos && cloudData.photos[plan.id];
-                const noteText = (cloudData.notes && cloudData.notes[plan.id]) || '';
+                const selectedDay = activeDayKey[plan.id];
 
                 const card = document.createElement('div');
                 card.className = `card ${isCompleted ? 'completed' : ''}`;
                 
+                // Generowanie przycisków dni
+                let daysHtml = '';
+                daysOfWeek.forEach(day => {
+                    const hasNote = cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][day];
+                    const isSelected = selectedDay === day;
+                    
+                    let btnClass = 'day-btn';
+                    if (isSelected) btnClass += ' active';
+                    else if (hasNote) btnClass += ' has-note';
+
+                    daysHtml += `<button class="${btnClass}" onclick="toggleDay('${plan.id}', '${day}')">
+                        ${hasNote && !isSelected ? '📝 ' : ''}${day}
+                    </button>`;
+                });
+
+                // Treść wybranej notatki dziennej
+                const currentDayNote = (selectedDay && cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][selectedDay]) || '';
+
                 card.innerHTML = `
                     <div class="card-header">
                         <span class="card-title" onclick="openPdf('${plan.url}', '${plan.week}')">📅 ${plan.week}</span>
@@ -281,14 +340,41 @@
                         }
                     </div>
 
-                    <div class="notes-section">
-                        <label for="note_${plan.id}">📝 Notatki z treningu:</label>
-                        <textarea id="note_${plan.id}" class="notes-input" placeholder="Wpisz tutaj osiągnięte ciężary, uwagi...">${noteText}</textarea>
-                        <button class="btn save-note" onclick="saveNote('${plan.id}')">💾 Zapisz notatkę</button>
+                    <div class="days-section">
+                        <div class="days-title">Notatki dzienne:</div>
+                        <div class="days-grid">${daysHtml}</div>
+                        
+                        <div class="day-note-container" id="noteBox_${plan.id}" style="display: ${selectedDay ? 'flex' : 'none'};">
+                            <strong>✏️ Notatka na ${selectedDay}:</strong>
+                            <textarea id="noteInput_${plan.id}" class="notes-input" placeholder="Wpisz ciężary, powtórzenia i samopoczucie na ten dzień...">${currentDayNote}</textarea>
+                            <button class="btn save-note" onclick="saveDayNote('${plan.id}', '${selectedDay}')">💾 Zapisz dla: ${selectedDay}</button>
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
             });
+        }
+
+        function toggleDay(planId, day) {
+            if (activeDayKey[planId] === day) {
+                delete activeDayKey[planId]; // Ukryj, jeśli kliknięto ponownie ten sam dzień
+            } else {
+                activeDayKey[planId] = day; // Otwórz wybrany dzień
+            }
+            renderPlans();
+        }
+
+        async function saveDayNote(planId, day) {
+            const noteText = document.getElementById(`noteInput_${planId}`).value;
+            
+            if (!cloudData.dailyNotes) cloudData.dailyNotes = {};
+            if (!cloudData.dailyNotes[planId]) cloudData.dailyNotes[planId] = {};
+            
+            cloudData.dailyNotes[planId][day] = noteText;
+            
+            renderPlans();
+            await saveCloudData();
+            alert(`Notatka na ${day} została zapisana w chmurze! ☁️`);
         }
 
         async function toggleStatus(planId) {
@@ -296,14 +382,6 @@
             cloudData.statuses[planId] = !cloudData.statuses[planId];
             renderPlans();
             await saveCloudData();
-        }
-
-        async function saveNote(planId) {
-            const noteContent = document.getElementById(`note_${planId}`).value;
-            if (!cloudData.notes) cloudData.notes = {};
-            cloudData.notes[planId] = noteContent;
-            await saveCloudData();
-            alert("Notatka zapisana w chmurze! ☁️");
         }
 
         function triggerFileInput(planId) {
@@ -369,7 +447,6 @@
             document.getElementById('fullPhotoImg').src = '';
         }
 
-        // Start – wczytanie danych po otwarciu strony
         loadCloudData();
     </script>
 </body>
