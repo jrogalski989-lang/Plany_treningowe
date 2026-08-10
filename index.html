@@ -95,6 +95,8 @@
             color: #2e7d32;
             border-color: #a5d6a7;
             font-weight: bold;
+            width: 100%;
+            padding: 8px;
         }
 
         .photo-section {
@@ -163,34 +165,64 @@
         .day-note-container {
             display: none;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             background: #ffffff;
             padding: 12px;
             border-radius: 8px;
             border: 1px solid #ddd;
         }
 
-        .exercise-form {
+        /* STRUKTURA DWUKROKOWA DODAWANIA ĆWICZENIA */
+        .exercise-form-step {
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            align-items: center;
+            flex-direction: column;
+            gap: 8px;
             background: #f9f9f9;
-            padding: 8px;
+            padding: 10px;
             border-radius: 6px;
             border: 1px solid #eee;
         }
 
-        .exercise-select, .weight-input, .reps-input {
-            padding: 6px;
+        .form-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .exercise-select {
+            width: 100%;
+            padding: 8px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 13px;
         }
 
-        .exercise-select { flex-grow: 1; }
-        .weight-input { width: 60px; }
-        .reps-input { width: 50px; }
+        .params-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .param-field {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .param-field label {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .param-input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
 
         .exercise-list {
             display: flex;
@@ -205,7 +237,7 @@
             align-items: center;
             background: #f1f8e9;
             border: 1px solid #c8e6c9;
-            padding: 6px 10px;
+            padding: 8px 10px;
             border-radius: 6px;
             font-size: 13px;
         }
@@ -300,7 +332,6 @@
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
-        // BAZA DEDYKOWANYCH ĆWICZEŃ DO WYBORU (Możesz tu dopisać swoje ćwiczenia)
         const exerciseOptions = [
             "Wyciskanie sztangi na ławce poziomej",
             "Wyciskanie hantli na skosie dodatnim",
@@ -378,22 +409,19 @@
                     </button>`;
                 });
 
-                // Pobieranie wpisanych danych dla wybranego dnia
                 const currentDayNote = (selectedDay && cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][selectedDay]) || '';
                 const currentExercises = (selectedDay && cloudData.dailyExercises && cloudData.dailyExercises[plan.id] && cloudData.dailyExercises[plan.id][selectedDay]) || [];
 
-                // Generowanie listy dodanych ćwiczeń
                 let exercisesListHtml = '';
                 currentExercises.forEach((ex, index) => {
                     exercisesListHtml += `
                         <div class="exercise-item">
-                            <span>💪 <strong>${ex.name}</strong>: ${ex.weight} kg × ${ex.reps} powt.</span>
+                            <span>💪 <strong>${ex.name}</strong>: ${ex.weight} kg × ${ex.sets || 1} serii × ${ex.reps} powt.</span>
                             <button class="btn delete" onclick="removeExercise('${plan.id}', '${selectedDay}', ${index})">✕</button>
                         </div>
                     `;
                 });
 
-                // Generowanie opcji wyboru ćwiczeń do listy
                 let exerciseSelectOptions = exerciseOptions.map(ex => `<option value="${ex}">${ex}</option>`).join('');
 
                 card.innerHTML = `
@@ -420,17 +448,32 @@
                         <div class="day-note-container" id="noteBox_${plan.id}" style="display: ${selectedDay ? 'flex' : 'none'};">
                             <strong>🏋️ Trening w: ${selectedDay}</strong>
                             
-                            <!-- Formularz dodawania ćwiczenia -->
-                            <div class="exercise-form">
+                            <!-- PODZIELONY FORMULARZ DODAWANIA ĆWICZENIA -->
+                            <div class="exercise-form-step">
+                                <span class="form-label">1. Wybierz ćwiczenie:</span>
                                 <select id="exSelect_${plan.id}" class="exercise-select">
                                     ${exerciseSelectOptions}
                                 </select>
-                                <input type="number" id="exWeight_${plan.id}" class="weight-input" placeholder="kg">
-                                <input type="number" id="exReps_${plan.id}" class="reps-input" placeholder="powt">
-                                <button class="btn add-exercise" onclick="addExercise('${plan.id}', '${selectedDay}')">➕ Dodaj</button>
+
+                                <span class="form-label" style="margin-top: 4px;">2. Podaj parametry:</span>
+                                <div class="params-row">
+                                    <div class="param-field">
+                                        <label>Ciężar (kg)</label>
+                                        <input type="number" id="exWeight_${plan.id}" class="param-input" placeholder="0">
+                                    </div>
+                                    <div class="param-field">
+                                        <label>Ilość serii</label>
+                                        <input type="number" id="exSets_${plan.id}" class="param-input" placeholder="1">
+                                    </div>
+                                    <div class="param-field">
+                                        <label>Powtórzenia</label>
+                                        <input type="number" id="exReps_${plan.id}" class="param-input" placeholder="0">
+                                    </div>
+                                </div>
+
+                                <button class="btn add-exercise" style="margin-top: 6px;" onclick="addExercise('${plan.id}', '${selectedDay}')">➕ Dodaj ćwiczenie</button>
                             </div>
 
-                            <!-- Lista wykonać w danym dniu -->
                             <div class="exercise-list">
                                 ${exercisesListHtml}
                             </div>
@@ -439,7 +482,7 @@
 
                             <label for="noteInput_${plan.id}" style="font-size:12px; font-weight:bold; color:#555;">📝 Uwagi do dnia:</label>
                             <textarea id="noteInput_${plan.id}" class="notes-input" placeholder="Wpisz ogólne samopoczucie, ból stawów...">${currentDayNote}</textarea>
-                            <button class="btn save-note" onclick="saveDayNote('${plan.id}', '${selectedDay}')">💾 Zapisz dla: ${selectedDay}</button>
+                            <button class="btn save-note" style="background: #e3f2fd; color: #1565c0; border-color: #90caf9;" onclick="saveDayNote('${plan.id}', '${selectedDay}')">💾 Zapisz notatkę</button>
                         </div>
                     </div>
                 `;
@@ -459,13 +502,14 @@
         async function addExercise(planId, day) {
             const name = document.getElementById(`exSelect_${planId}`).value;
             const weight = document.getElementById(`exWeight_${planId}`).value || 0;
+            const sets = document.getElementById(`exSets_${planId}`).value || 1;
             const reps = document.getElementById(`exReps_${planId}`).value || 0;
 
             if (!cloudData.dailyExercises) cloudData.dailyExercises = {};
             if (!cloudData.dailyExercises[planId]) cloudData.dailyExercises[planId] = {};
             if (!cloudData.dailyExercises[planId][day]) cloudData.dailyExercises[planId][day] = [];
 
-            cloudData.dailyExercises[planId][day].push({ name, weight, reps });
+            cloudData.dailyExercises[planId][day].push({ name, weight, sets, reps });
 
             renderPlans();
             await saveCloudData();
