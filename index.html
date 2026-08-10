@@ -99,12 +99,23 @@
             font-weight: bold;
         }
 
-        .photo-section {
+        /* SEKCJA ZDJĘĆ - DWA BLOKI OBOK SIEBIE */
+        .photos-container {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            gap: 16px;
             border-top: 1px dashed #ccc;
             padding-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .photo-block {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
             flex-wrap: wrap;
         }
 
@@ -161,7 +172,6 @@
             background: #e3f2fd;
         }
 
-        /* PANEL DNIOWY */
         .day-note-container {
             display: none;
             flex-direction: column;
@@ -172,7 +182,6 @@
             border: 1px solid #ddd;
         }
 
-        /* DODAWANIE ĆWICZENIA (KROK 1) */
         .add-ex-box {
             display: flex;
             gap: 6px;
@@ -190,7 +199,6 @@
             font-size: 13px;
         }
 
-        /* BLOK DODANEGO ĆWICZENIA */
         .exercise-block {
             background: #f8f9fa;
             border: 1px solid #e2e8f0;
@@ -227,7 +235,6 @@
             font-size: 12px;
         }
 
-        /* FORMULARZ SERII (KROK 2) */
         .add-set-row {
             display: flex;
             gap: 6px;
@@ -314,10 +321,10 @@
 
     <div class="modal" id="photoModal">
         <div class="modal-header">
-            <span>Zdjęcie Progresu</span>
+            <span>Podgląd zdjęcia</span>
             <button class="close-btn" onclick="closePhoto()">Zamknij ✖</button>
         </div>
-        <img id="fullPhotoImg" class="full-photo" src="" alt="Zdjęcie progresu">
+        <img id="fullPhotoImg" class="full-photo" src="" alt="Podgląd zdjęcia">
     </div>
 
     <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
@@ -348,8 +355,9 @@
             "Brzuszki / Allahy"
         ];
 
-        let cloudData = { statuses: {}, photos: {}, dailyNotes: {}, dailyExercises: {} };
+        let cloudData = { statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {} };
         let currentActivePlanId = null;
+        let currentPhotoType = null; // 'progress' lub 'weight'
         let activeDayKey = {};
 
         async function loadCloudData() {
@@ -360,6 +368,7 @@
                     cloudData = {
                         statuses: data.statuses || {},
                         photos: data.photos || {},
+                        weightPhotos: data.weightPhotos || {},
                         dailyNotes: data.dailyNotes || {},
                         dailyExercises: data.dailyExercises || {}
                     };
@@ -389,6 +398,7 @@
             plans.forEach(plan => {
                 const isCompleted = cloudData.statuses && cloudData.statuses[plan.id] === true;
                 const photoData = cloudData.photos && cloudData.photos[plan.id];
+                const weightPhotoData = cloudData.weightPhotos && cloudData.weightPhotos[plan.id];
                 const selectedDay = activeDayKey[plan.id];
 
                 const card = document.createElement('div');
@@ -413,7 +423,6 @@
                 const currentDayNote = (selectedDay && cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][selectedDay]) || '';
                 const currentExercises = (selectedDay && cloudData.dailyExercises && cloudData.dailyExercises[plan.id] && cloudData.dailyExercises[plan.id][selectedDay]) || [];
 
-                // Generowanie listy dodanych ćwiczeń i ich serii
                 let exercisesBlocksHtml = '';
                 currentExercises.forEach((ex, exIndex) => {
                     let setsListHtml = '';
@@ -455,13 +464,27 @@
                         </button>
                     </div>
                     
-                    <div class="photo-section">
-                        ${photoData ? 
-                            `<img src="${photoData}" class="photo-preview" onclick="openPhoto('${photoData}')">
-                             <button class="btn" onclick="triggerFileInput('${plan.id}')">🔄 Zmień</button>
-                             <button class="btn delete" onclick="deletePhoto('${plan.id}')">🗑️ Usuń</button>` : 
-                            `<button class="btn" onclick="triggerFileInput('${plan.id}')">📷 Dodaj zdjęcie progresu</button>`
-                        }
+                    <!-- SEKCJA ZDJĘĆ: PROGRES + WAGA -->
+                    <div class="photos-container">
+                        <!-- Zdjęcie Progresu -->
+                        <div class="photo-block">
+                            ${photoData ? 
+                                `<img src="${photoData}" class="photo-preview" onclick="openPhoto('${photoData}')">
+                                 <button class="btn" onclick="triggerFileInput('${plan.id}', 'progress')">🔄 Zmień silę</button>
+                                 <button class="btn delete" onclick="deletePhoto('${plan.id}', 'progress')">🗑️</button>` : 
+                                `<button class="btn" onclick="triggerFileInput('${plan.id}', 'progress')">📷 Zdjęcie progresu</button>`
+                            }
+                        </div>
+
+                        <!-- Zdjęcie z Wagi (Niedziela) -->
+                        <div class="photo-block">
+                            ${weightPhotoData ? 
+                                `<img src="${weightPhotoData}" class="photo-preview" onclick="openPhoto('${weightPhotoData}')">
+                                 <button class="btn" onclick="triggerFileInput('${plan.id}', 'weight')">🔄 Zmień wagę</button>
+                                 <button class="btn delete" onclick="deletePhoto('${plan.id}', 'weight')">🗑️</button>` : 
+                                `<button class="btn" onclick="triggerFileInput('${plan.id}', 'weight')">⚖️ Zdjęcie z wagi (Niedziela)</button>`
+                            }
+                        </div>
                     </div>
 
                     <div class="days-section">
@@ -471,7 +494,6 @@
                         <div class="day-note-container" id="noteBox_${plan.id}" style="display: ${selectedDay ? 'flex' : 'none'};">
                             <strong>🏋️ Trening w: ${selectedDay}</strong>
                             
-                            <!-- KROK 1: DODAJ SĄMO ĆWICZENIE -->
                             <div class="add-ex-box">
                                 <select id="exSelect_${plan.id}" class="exercise-select">
                                     ${exerciseSelectOptions}
@@ -479,7 +501,6 @@
                                 <button class="btn add-exercise" onclick="addExercise('${plan.id}', '${selectedDay}')">➕ Dodaj ćwiczenie</button>
                             </div>
 
-                            <!-- KROK 2: DODANE ĆWICZENIA I ZARZĄDZANIE SERIAMI -->
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 ${exercisesBlocksHtml}
                             </div>
@@ -505,7 +526,6 @@
             renderPlans();
         }
 
-        // KROK 1: Dodanie samego ćwiczenia z pustą listą serii
         async function addExercise(planId, day) {
             const name = document.getElementById(`exSelect_${planId}`).value;
 
@@ -519,7 +539,6 @@
             await saveCloudData();
         }
 
-        // KROK 2: Dodanie pojedynczej serii do konkretnego ćwiczenia
         async function addSet(planId, day, exIndex) {
             const weightInput = document.getElementById(`weight_${planId}_${exIndex}`);
             const repsInput = document.getElementById(`reps_${planId}_${exIndex}`);
@@ -537,14 +556,12 @@
             await saveCloudData();
         }
 
-        // Usuwanie serii z ćwiczenia
         async function removeSet(planId, day, exIndex, setIndex) {
             cloudData.dailyExercises[planId][day][exIndex].sets.splice(setIndex, 1);
             renderPlans();
             await saveCloudData();
         }
 
-        // Usuwanie całego ćwiczenia
         async function removeExercise(planId, day, exIndex) {
             cloudData.dailyExercises[planId][day].splice(exIndex, 1);
             renderPlans();
@@ -571,8 +588,9 @@
             await saveCloudData();
         }
 
-        function triggerFileInput(planId) {
+        function triggerFileInput(planId, type) {
             currentActivePlanId = planId;
+            currentPhotoType = type;
             document.getElementById('fileInput').click();
         }
 
@@ -595,8 +613,14 @@
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
                     const resizedImage = canvas.toDataURL('image/jpeg', 0.6);
-                    if (!cloudData.photos) cloudData.photos = {};
-                    cloudData.photos[currentActivePlanId] = resizedImage;
+                    
+                    if (currentPhotoType === 'progress') {
+                        if (!cloudData.photos) cloudData.photos = {};
+                        cloudData.photos[currentActivePlanId] = resizedImage;
+                    } else if (currentPhotoType === 'weight') {
+                        if (!cloudData.weightPhotos) cloudData.weightPhotos = {};
+                        cloudData.weightPhotos[currentActivePlanId] = resizedImage;
+                    }
                     
                     renderPlans();
                     await saveCloudData();
@@ -605,9 +629,13 @@
             reader.readAsDataURL(file);
         }
 
-        async function deletePhoto(planId) {
+        async function deletePhoto(planId, type) {
             if (confirm("Czy na pewno chcesz usunąć to zdjęcie z chmury?")) {
-                if (cloudData.photos) delete cloudData.photos[planId];
+                if (type === 'progress' && cloudData.photos) {
+                    delete cloudData.photos[planId];
+                } else if (type === 'weight' && cloudData.weightPhotos) {
+                    delete cloudData.weightPhotos[planId];
+                }
                 renderPlans();
                 await saveCloudData();
             }
