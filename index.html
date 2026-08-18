@@ -191,7 +191,6 @@
             align-items: center;
         }
 
-        /* WŁASNE ROZWIJANE MENU Z BLOKADĄ NA 5 ELEMENTÓW */
         .custom-select-container {
             position: relative;
             flex: 1;
@@ -219,11 +218,11 @@
             background: #ffffff;
             border: 1px solid #ccc;
             border-radius: 6px;
-            max-height: 180px; /* Wysokość mieszcząca ok. 5 elementów */
+            max-height: 180px;
             overflow-y: auto;
             z-index: 100;
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            -webkit-overflow-scrolling: touch; /* Płynne przewijanie na telefonach */
+            -webkit-overflow-scrolling: touch;
         }
 
         .custom-select-options.open {
@@ -389,6 +388,7 @@
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
+        // ZAKTUALIZOWANA LISTA ĆWICZEŃ Z NOWYMI POZYCJAMI
         const exerciseOptions = [
             "Wyciskanie sztangi na ławce poziomej",
             "Wyciskanie hantli na skosie dodatnim",
@@ -396,6 +396,11 @@
             "Martwy ciąg",
             "Wiosłowanie sztangą",
             "Podciąganie na drążku",
+            "Podciąganie nachwytem",
+            "Podciąganie podchwytem",
+            "Ściąganie w dół na wyciągu",
+            "Suwnica",
+            "Suwnica jednonóż",
             "Wyciskanie żołnierskie (OHP)",
             "Uginanie ramion ze sztangą (Biceps)",
             "Prostowanie ramion na wyciągu (Triceps)",
@@ -408,7 +413,7 @@
         let currentActivePlanId = null;
         let currentPhotoType = null;
         let activeDayKey = {};
-        let selectedExercisePerPlan = {}; // Przechowuje wybrane ćwiczenie w dropdownie
+        let selectedExercisePerPlan = {};
 
         async function loadCloudData() {
             try {
@@ -504,7 +509,6 @@
                     `;
                 });
 
-                // Domyślne wybrane ćwiczenie
                 const currentChoice = selectedExercisePerPlan[plan.id] || exerciseOptions[0];
                 let customOptionsHtml = exerciseOptions.map(ex => `
                     <div class="custom-option ${ex === currentChoice ? 'selected' : ''}" onclick="selectCustomOption('${plan.id}', '${ex}')">
@@ -547,7 +551,6 @@
                         <div class="day-note-container" id="noteBox_${plan.id}" style="display: ${selectedDay ? 'flex' : 'none'};">
                             <strong>🏋️ Trening w: ${selectedDay}</strong>
                             
-                            <!-- ROZWIJANA LISTA Z PRZEWIJANIEM (MAX 5 POZYCJI) -->
                             <div class="add-ex-box">
                                 <div class="custom-select-container">
                                     <div class="custom-select-trigger" onclick="toggleCustomDropdown('${plan.id}')">
@@ -595,7 +598,6 @@
             renderPlans();
         }
 
-        // Zamykanie listy po kliknięciu poza nią
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.custom-select-container')) {
                 document.querySelectorAll('.custom-select-options').forEach(box => box.classList.remove('open'));
