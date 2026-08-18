@@ -97,9 +97,9 @@
             color: #2e7d32;
             border-color: #a5d6a7;
             font-weight: bold;
+            white-space: nowrap;
         }
 
-        /* SEKCJA ZDJĘĆ - DWA BLOKI OBOK SIEBIE */
         .photos-container {
             display: flex;
             gap: 16px;
@@ -128,7 +128,6 @@
             border: 1px solid #aaa;
         }
 
-        /* SEKCJA DNI TYGODNIA */
         .days-section {
             border-top: 1px dashed #ccc;
             padding-top: 10px;
@@ -184,19 +183,68 @@
 
         .add-ex-box {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             background: #f9f9f9;
             padding: 8px;
             border-radius: 6px;
             border: 1px solid #eee;
+            align-items: center;
         }
 
-        .exercise-select {
+        /* WŁASNE ROZWIJANE MENU Z BLOKADĄ NA 5 ELEMENTÓW */
+        .custom-select-container {
+            position: relative;
             flex: 1;
-            padding: 6px;
+        }
+
+        .custom-select-trigger {
+            background: #ffffff;
             border: 1px solid #ccc;
             border-radius: 6px;
+            padding: 7px 10px;
             font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .custom-select-options {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            max-height: 180px; /* Wysokość mieszcząca ok. 5 elementów */
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            -webkit-overflow-scrolling: touch; /* Płynne przewijanie na telefonach */
+        }
+
+        .custom-select-options.open {
+            display: block;
+        }
+
+        .custom-option {
+            padding: 9px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .custom-option:last-child {
+            border-bottom: none;
+        }
+
+        .custom-option:hover, .custom-option.selected {
+            background: #e8f5e9;
+            color: #2e7d32;
+            font-weight: bold;
         }
 
         .exercise-block {
@@ -350,12 +398,6 @@
             "Podciąganie na drążku",
             "Wyciskanie żołnierskie (OHP)",
             "Uginanie ramion ze sztangą (Biceps)",
-            "Suwnica jednonóż",
-            "Suwnica",
-            "Podciąganie podchwyt",
-            "Podciąganie nachwyt",
-            "Ściąganie w dół na wyciągu",
-            "Hip-trust",
             "Prostowanie ramion na wyciągu (Triceps)",
             "Wznosy bokiem z hantlami (Barki)",
             "Wspięcia na palce (Łydki)",
@@ -364,8 +406,9 @@
 
         let cloudData = { statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {} };
         let currentActivePlanId = null;
-        let currentPhotoType = null; // 'progress' lub 'weight'
+        let currentPhotoType = null;
         let activeDayKey = {};
+        let selectedExercisePerPlan = {}; // Przechowuje wybrane ćwiczenie w dropdownie
 
         async function loadCloudData() {
             try {
@@ -461,7 +504,13 @@
                     `;
                 });
 
-                let exerciseSelectOptions = exerciseOptions.map(ex => `<option value="${ex}">${ex}</option>`).join('');
+                // Domyślne wybrane ćwiczenie
+                const currentChoice = selectedExercisePerPlan[plan.id] || exerciseOptions[0];
+                let customOptionsHtml = exerciseOptions.map(ex => `
+                    <div class="custom-option ${ex === currentChoice ? 'selected' : ''}" onclick="selectCustomOption('${plan.id}', '${ex}')">
+                        ${ex}
+                    </div>
+                `).join('');
 
                 card.innerHTML = `
                     <div class="card-header">
@@ -471,9 +520,7 @@
                         </button>
                     </div>
                     
-                    <!-- SEKCJA ZDJĘĆ: PROGRES + WAGA -->
                     <div class="photos-container">
-                        <!-- Zdjęcie Progresu -->
                         <div class="photo-block">
                             ${photoData ? 
                                 `<img src="${photoData}" class="photo-preview" onclick="openPhoto('${photoData}')">
@@ -483,7 +530,6 @@
                             }
                         </div>
 
-                        <!-- Zdjęcie z Wagi -->
                         <div class="photo-block">
                             ${weightPhotoData ? 
                                 `<img src="${weightPhotoData}" class="photo-preview" onclick="openPhoto('${weightPhotoData}')">
@@ -501,10 +547,17 @@
                         <div class="day-note-container" id="noteBox_${plan.id}" style="display: ${selectedDay ? 'flex' : 'none'};">
                             <strong>🏋️ Trening w: ${selectedDay}</strong>
                             
+                            <!-- ROZWIJANA LISTA Z PRZEWIJANIEM (MAX 5 POZYCJI) -->
                             <div class="add-ex-box">
-                                <select id="exSelect_${plan.id}" class="exercise-select">
-                                    ${exerciseSelectOptions}
-                                </select>
+                                <div class="custom-select-container">
+                                    <div class="custom-select-trigger" onclick="toggleCustomDropdown('${plan.id}')">
+                                        <span id="triggerText_${plan.id}">${currentChoice}</span>
+                                        <span>▾</span>
+                                    </div>
+                                    <div class="custom-select-options" id="optionsBox_${plan.id}">
+                                        ${customOptionsHtml}
+                                    </div>
+                                </div>
                                 <button class="btn add-exercise" onclick="addExercise('${plan.id}', '${selectedDay}')">➕ Dodaj ćwiczenie</button>
                             </div>
 
@@ -524,6 +577,31 @@
             });
         }
 
+        function toggleCustomDropdown(planId) {
+            const box = document.getElementById(`optionsBox_${planId}`);
+            if (box) {
+                box.classList.toggle('open');
+            }
+        }
+
+        function selectCustomOption(planId, exName) {
+            selectedExercisePerPlan[planId] = exName;
+            const trigger = document.getElementById(`triggerText_${planId}`);
+            if (trigger) trigger.innerText = exName;
+            
+            const box = document.getElementById(`optionsBox_${planId}`);
+            if (box) box.classList.remove('open');
+            
+            renderPlans();
+        }
+
+        // Zamykanie listy po kliknięciu poza nią
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.custom-select-container')) {
+                document.querySelectorAll('.custom-select-options').forEach(box => box.classList.remove('open'));
+            }
+        });
+
         function toggleDay(planId, day) {
             if (activeDayKey[planId] === day) {
                 delete activeDayKey[planId];
@@ -534,7 +612,7 @@
         }
 
         async function addExercise(planId, day) {
-            const name = document.getElementById(`exSelect_${planId}`).value;
+            const name = selectedExercisePerPlan[planId] || exerciseOptions[0];
 
             if (!cloudData.dailyExercises) cloudData.dailyExercises = {};
             if (!cloudData.dailyExercises[planId]) cloudData.dailyExercises[planId] = {};
