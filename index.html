@@ -18,42 +18,30 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* PRZYKLEJONY NAGŁÓWEK (STICKY HEADER JAK W EXCELU) */
         .header-container {
             position: sticky;
             top: 0;
             z-index: 50;
-            background: rgba(248, 250, 252, 0.9); /* Półprzezroczyste tło dopasowane do strony */
-            backdrop-filter: blur(12px);          /* Efekt rozmycia przewijanej treści pod spodem */
-            -webkit-backdrop-filter: blur(12px);
-            margin: 0 -16px 20px -16px;           /* Rozciągnięcie do krawędzi ekranu */
-            padding: 12px 16px 8px 16px;
+            background: rgba(248, 250, 252, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            margin: 0 -16px 16px -16px;
+            padding: 8px 16px 6px 16px;
             display: flex;
             justify-content: center;
             align-items: center;
             border-bottom: 1px solid rgba(226, 232, 240, 0.6);
         }
 
-        /* DUŻE LOGO DOPASOWANE DO SZEROKOŚCI IPHONE PRO MAX */
-        .header-logo {
-            max-width: 440px;                     /* Idealna szerokość pod iPhone Pro Max */
-            width: 95%;
+        #transparentLogoCanvas {
+            max-width: 380px;
+            width: 90%;
             height: auto;
             display: block;
-            mix-blend-mode: multiply;
-            filter: contrast(1.18) brightness(1.02);
-            -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 60%, transparent 98%);
-            mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 60%, transparent 98%);
-            transition: transform 0.2s ease;
-        }
-
-        .header-logo:hover {
-            transform: scale(1.01);
         }
 
         .grid { display: flex; flex-direction: column; gap: 20px; }
 
-        /* FIZYCZNA KARTA Z MIĘKKIM CIENIEM */
         .card { 
             background: #ffffff; 
             border: 1px solid rgba(226, 232, 240, 0.8); 
@@ -503,9 +491,8 @@
 </head>
 <body>
 
-    <!-- PRZYKLEJONY NAGŁÓWEK Z DUŻYM LOGO -->
     <div class="header-container">
-        <img src="logo.png" onerror="this.onerror=null; this.src='logo.jpg';" alt="jRogalski - can't rush greatness" class="header-logo">
+        <canvas id="transparentLogoCanvas"></canvas>
     </div>
 
     <div class="grid" id="planList"></div>
@@ -530,6 +517,43 @@
     <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
 
     <script>
+        // GENEROWANIE LOGO BEZ TŁA DLA SAFARI / IOS
+        function renderTransparentLogo() {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = "logo.png";
+            img.onerror = () => { img.src = "logo.jpg"; };
+            
+            img.onload = function() {
+                const canvas = document.getElementById("transparentLogoCanvas");
+                const ctx = canvas.getContext("2d");
+                
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                
+                ctx.drawImage(img, 0, 0);
+                
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+                
+                // Konwersja jasnych pikseli na przezroczyste
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+                    
+                    if (brightness > 240) {
+                        data[i + 3] = 0;
+                    } else if (brightness > 170) {
+                        data[i + 3] = Math.round(255 * (1 - (brightness - 170) / 70));
+                    }
+                }
+                ctx.putImageData(imgData, 0, 0);
+            };
+        }
+        window.addEventListener('DOMContentLoaded', renderTransparentLogo);
+
         const FIREBASE_URL = "https://plan-treningowy-efc6d-default-rtdb.firebaseio.com/";
 
         const plans = [
@@ -848,7 +872,7 @@
                 cloudData.dailyExercises[planId][day][exIndex].sets = [];
             }
 
-            cloudData.dailyExercises[planId][day].push?.({ weight, reps }) || cloudData.dailyExercises[planId][day][exIndex].sets.push({ weight, reps });
+            cloudData.dailyExercises[planId][day][exIndex].sets.push({ weight, reps });
 
             renderPlans();
             await saveCloudData();
