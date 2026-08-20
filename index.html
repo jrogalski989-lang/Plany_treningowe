@@ -422,6 +422,19 @@
             border-color: #10b981;
         }
 
+        .note-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .note-status-hint {
+            font-size: 11px;
+            font-weight: 600;
+            color: #10b981;
+            transition: opacity 0.2s ease;
+        }
+
         .notes-input {
             width: 100%;
             height: 50px;
@@ -517,7 +530,6 @@
     <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
 
     <script>
-        // GENEROWANIE LOGO BEZ TŁA DLA SAFARI / IOS
         function renderTransparentLogo() {
             const img = new Image();
             img.crossOrigin = "anonymous";
@@ -536,7 +548,6 @@
                 const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = imgData.data;
                 
-                // Konwersja jasnych pikseli na przezroczyste
                 for (let i = 0; i < data.length; i += 4) {
                     const r = data[i];
                     const g = data[i + 1];
@@ -592,6 +603,7 @@
         let currentPhotoType = null;
         let activeDayKey = {};
         let selectedExercisePerPlan = {};
+        let noteSaveTimeouts = {};
 
         function getLastRecordForExercise(exerciseName, currentPlanId, currentDay) {
             if (!cloudData.dailyExercises) return null;
@@ -797,9 +809,11 @@
 
                             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 4px 0;">
 
-                            <label for="noteInput_${plan.id}" style="font-size:12px; font-weight:700; color:#64748b;">📝 NOTATKA Z DNIA:</label>
-                            <textarea id="noteInput_${plan.id}" class="notes-input ${hasNoteContent ? 'has-content' : ''}" oninput="handleNoteInput(this)" placeholder="Wpisz ogólne samopoczucie, ból stawów...">${currentDayNote}</textarea>
-                            <button class="btn" style="background:#0f172a; color:white; border:none; padding:8px; border-radius:10px; font-weight:600;" onclick="saveDayNote('${plan.id}', '${selectedDay}')">💾 Zapisz notatkę</button>
+                            <div class="note-header-row">
+                                <label for="noteInput_${plan.id}" style="font-size:12px; font-weight:700; color:#64748b;">📝 NOTATKA Z DNIA:</label>
+                                <span id="noteStatus_${plan.id}" class="note-status-hint"></span>
+                            </div>
+                            <textarea id="noteInput_${plan.id}" class="notes-input ${hasNoteContent ? 'has-content' : ''}" oninput="handleAutoSaveNote(this, '${plan.id}', '${selectedDay}')" onblur="flushAutoSaveNote(this, '${plan.id}', '${selectedDay}')" placeholder="Wpisz ogólne samopoczucie, ból stawów...">${currentDayNote}</textarea>
                         </div>
                     </div>
                 `;
@@ -807,11 +821,50 @@
             });
         }
 
-        function handleNoteInput(textarea) {
+        // AUTOMATYCZNY ZAPIS NOTATKI Z MECHANIZMEM DEBOUNCE
+        function handleAutoSaveNote(textarea, planId, day) {
             if (textarea.value.trim().length > 0) {
                 textarea.classList.add('has-content');
             } else {
                 textarea.classList.remove('has-content');
+            }
+
+            const statusEl = document.getElementById(`noteStatus_${planId}`);
+            if (statusEl) {
+                statusEl.innerText = "Zapisywanie... ⏳";
+                statusEl.style.color = "#64748b";
+            }
+
+            const timeoutKey = `${planId}_${day}`;
+            clearTimeout(noteSaveTimeouts[timeoutKey]);
+
+            noteSaveTimeouts[timeoutKey] = setTimeout(async () => {
+                await executeNoteSave(textarea.value, planId, day);
+            }, 600);
+        }
+
+        async function flushAutoSaveNote(textarea, planId, day) {
+            const timeoutKey = `${planId}_${day}`;
+            clearTimeout(noteSaveTimeouts[timeoutKey]);
+            await executeNoteSave(textarea.value, planId, day);
+        }
+
+        async function executeNoteSave(noteText, planId, day) {
+            if (!cloudData.dailyNotes) cloudData.dailyNotes = {};
+            if (!cloudData.dailyNotes[planId]) cloudData.dailyNotes[planId] = {};
+            
+            cloudData.dailyNotes[planId][day] = noteText;
+            await saveCloudData();
+
+            const statusEl = document.getElementById(`noteStatus_${planId}`);
+            if (statusEl) {
+                statusEl.innerText = "Zapisano w chmurze ☁️";
+                statusEl.style.color = "#10b981";
+                setTimeout(() => {
+                    if (statusEl.innerText === "Zapisano w chmurze ☁️") {
+                        statusEl.innerText = "";
+                    }
+                }, 2500);
             }
         }
 
@@ -888,19 +941,6 @@
             cloudData.dailyExercises[planId][day].splice(exIndex, 1);
             renderPlans();
             await saveCloudData();
-        }
-
-        async function saveDayNote(planId, day) {
-            const noteText = document.getElementById(`noteInput_${planId}`).value;
-            
-            if (!cloudData.dailyNotes) cloudData.dailyNotes = {};
-            if (!cloudData.dailyNotes[planId]) cloudData.dailyNotes[planId] = {};
-            
-            cloudData.dailyNotes[planId][day] = noteText;
-            
-            renderPlans();
-            await saveCloudData();
-            alert(`Notatka na ${day} została zapisana w chmurze! ☁️`);
         }
 
         async function toggleStatus(planId) {
