@@ -10,11 +10,12 @@
     <title>Plany Treningowe (Cloud)</title>
     <style>
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: #ffffff; 
-            color: #000000; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #f8fafc; 
+            color: #1e293b; 
             margin: 0; 
             padding: 16px; 
+            -webkit-font-smoothing: antialiased;
         }
 
         .header-container {
@@ -24,36 +25,50 @@
             margin-bottom: 20px;
         }
 
-        h1 { font-size: 20px; margin: 0; color: #2e7d32; }
-
-        .refresh-btn {
-            background: #e0e0e0;
-            border: 1px solid #ccc;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #333;
+        h1 { 
+            font-size: 22px; 
+            font-weight: 800; 
+            margin: 0; 
+            color: #0f172a; 
+            letter-spacing: -0.5px;
         }
 
-        .grid { display: flex; flex-direction: column; gap: 16px; }
+        .refresh-btn {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #475569;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
+        .refresh-btn:active {
+            transform: scale(0.95);
+            background: #f1f5f9;
+        }
+
+        .grid { display: flex; flex-direction: column; gap: 20px; }
+
+        /* FIZYCZNA KARTA Z MIĘKKIM CIENIEM */
         .card { 
-            background: #f5f5f5; 
-            border: 1px solid #e0e0e0; 
-            color: #000000; 
-            padding: 16px; 
-            border-radius: 12px; 
+            background: #ffffff; 
+            border: 1px solid rgba(226, 232, 240, 0.8); 
+            padding: 20px; 
+            border-radius: 18px; 
             display: flex; 
             flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            gap: 14px;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .card.completed {
-            background: #e8f5e9;
-            border-color: #a5d6a7;
+            border-color: #86efac;
+            background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
         }
 
         .card-header {
@@ -63,48 +78,69 @@
         }
 
         .card-title {
-            font-weight: bold;
+            font-weight: 700;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 17px;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-title:hover {
+            color: #10b981;
         }
 
         .btn {
             background: #ffffff;
-            border: 1px solid #ccc;
-            padding: 6px 10px;
-            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            padding: 7px 12px;
+            border-radius: 10px;
             font-size: 12px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
+            color: #334155;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
         }
 
         .btn.done {
-            background: #4CAF50;
+            background: #10b981;
             color: white;
-            border-color: #388E3C;
+            border-color: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
         }
 
         .btn.delete {
-            background: #ffebee;
-            color: #c62828;
-            border-color: #ef9a9a;
-            padding: 4px 8px;
-            font-size: 11px;
+            background: #fff1f2;
+            color: #e11d48;
+            border-color: #fecdd3;
         }
 
         .btn.add-exercise {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border-color: #a5d6a7;
-            font-weight: bold;
-            white-space: nowrap;
+            background: #10b981;
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
         }
 
         .photos-container {
             display: flex;
-            gap: 16px;
-            border-top: 1px dashed #ccc;
-            padding-top: 10px;
+            gap: 12px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 12px;
             flex-wrap: wrap;
         }
 
@@ -112,25 +148,31 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            background: #ffffff;
+            background: #f8fafc;
             padding: 6px 10px;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
             flex-wrap: wrap;
         }
 
         .photo-preview {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             object-fit: cover;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            border: 1px solid #aaa;
+            border: 1px solid #cbd5e1;
+            transition: transform 0.2s ease;
         }
 
+        .photo-preview:hover {
+            transform: scale(1.05);
+        }
+
+        /* SEKCJA DNI TYGODNIA I PIGUŁKI Z KROPKĄ */
         .days-section {
-            border-top: 1px dashed #ccc;
-            padding-top: 10px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 12px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -138,8 +180,10 @@
 
         .days-title {
             font-size: 13px;
-            font-weight: bold;
-            color: #444;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .days-grid {
@@ -149,45 +193,70 @@
         }
 
         .day-btn {
-            background: #ffffff;
-            border: 1px solid #bbb;
-            padding: 6px 10px;
-            border-radius: 6px;
+            position: relative;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 7px 12px;
+            border-radius: 999px;
             font-size: 12px;
             cursor: pointer;
-            font-weight: bold;
-            transition: 0.2s;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .day-btn:active {
+            transform: scale(0.95);
         }
 
         .day-btn.active {
-            background: #2196F3;
-            color: white;
-            border-color: #1976D2;
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
         }
 
-        .day-btn.has-note {
-            border-color: #2196F3;
-            color: #1565c0;
-            background: #e3f2fd;
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 6px #10b981;
         }
 
+        .day-btn.active .status-dot {
+            background-color: #4ade80;
+            box-shadow: 0 0 8px #4ade80;
+        }
+
+        /* ANIMOWANY PANEL DNIA */
         .day-note-container {
             display: none;
             flex-direction: column;
             gap: 12px;
-            background: #ffffff;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            animation: fadeSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeSlideDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .add-ex-box {
             display: flex;
             gap: 8px;
-            background: #f9f9f9;
+            background: #ffffff;
             padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #eee;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
             align-items: center;
         }
 
@@ -198,31 +267,32 @@
 
         .custom-select-trigger {
             background: #ffffff;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            padding: 7px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 12px;
             font-size: 13px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            user-select: none;
+            font-weight: 500;
         }
 
         .custom-select-options {
             display: none;
             position: absolute;
-            top: calc(100% + 4px);
+            top: calc(100% + 6px);
             left: 0;
             right: 0;
             background: #ffffff;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
             max-height: 180px;
             overflow-y: auto;
             z-index: 100;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             -webkit-overflow-scrolling: touch;
+            animation: fadeSlideDown 0.15s ease-out;
         }
 
         .custom-select-options.open {
@@ -230,10 +300,10 @@
         }
 
         .custom-option {
-            padding: 9px 12px;
+            padding: 10px 12px;
             font-size: 13px;
             cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f1f5f9;
         }
 
         .custom-option:last-child {
@@ -241,57 +311,107 @@
         }
 
         .custom-option:hover, .custom-option.selected {
-            background: #e8f5e9;
-            color: #2e7d32;
-            font-weight: bold;
+            background: #f0fdf4;
+            color: #10b981;
+            font-weight: 600;
         }
 
         .exercise-block {
-            background: #f8f9fa;
+            background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 14px;
+            padding: 12px 14px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
 
         .ex-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-weight: bold;
+            font-weight: 700;
             font-size: 14px;
-            color: #2e7d32;
+            color: #0f172a;
         }
 
         .last-record-badge {
-            background: #e3f2fd;
-            color: #0d47a1;
+            background: #f0fdf4;
+            color: #15803d;
             font-size: 11.5px;
-            padding: 5px 8px;
-            border-radius: 6px;
-            border: 1px solid #bbdefb;
-            display: flex;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #bbf7d0;
+            display: inline-flex;
             align-items: center;
             gap: 5px;
+            font-weight: 500;
         }
 
+        /* PUNKT 4: NOWOCZESNA LISTA SERII */
         .sets-list {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .set-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #ffffff;
-            border: 1px solid #e0e0e0;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .set-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: #e2e8f0;
+            color: #475569;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+
+        .set-data {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            color: #0f172a;
+        }
+
+        .set-data strong {
+            font-size: 14px;
+        }
+
+        .set-data span {
+            color: #64748b;
+            font-size: 11px;
+            margin-right: 4px;
+        }
+
+        .btn-mini-delete {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-mini-delete:hover {
+            color: #e11d48;
+            background: #ffe4e6;
         }
 
         .add-set-row {
@@ -302,31 +422,44 @@
         }
 
         .set-input {
-            width: 60px;
-            padding: 4px 6px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 12px;
+            width: 65px;
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+            background: #ffffff;
+            transition: border-color 0.2s;
         }
 
-        /* POLE NOTATKI */
+        .set-input:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
         .notes-input {
             width: 100%;
             height: 50px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px;
             font-family: inherit;
             font-size: 13px;
             box-sizing: border-box;
             resize: vertical;
-            transition: height 0.25s ease, border-color 0.25s ease;
+            background: #ffffff;
+            transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s;
+        }
+
+        .notes-input:focus {
+            outline: none;
+            border-color: #10b981;
         }
 
         .notes-input.has-content {
             height: 110px;
-            border-color: #90caf9;
-            background: #fbfdff;
+            border-color: #93c5fd;
+            background: #f8fafc;
         }
 
         .modal { 
@@ -334,7 +467,8 @@
             position: fixed; 
             top: 0; left: 0; 
             width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); 
+            background: rgba(15, 23, 42, 0.7); 
+            backdrop-filter: blur(4px);
             flex-direction: column; 
             z-index: 1000;
         }
@@ -342,19 +476,20 @@
         .modal-header { 
             display: flex; 
             justify-content: space-between; 
-            padding: 12px 16px; 
+            padding: 14px 18px; 
             background: #ffffff; 
-            color: #000000; 
+            color: #0f172a; 
             align-items: center; 
+            border-bottom: 1px solid #e2e8f0;
         }
 
         .close-btn { 
-            background: #d32f2f; 
-            color: white; 
+            background: #fee2e2; 
+            color: #ef4444; 
             border: none; 
-            padding: 8px 16px; 
-            border-radius: 6px; 
-            font-weight: bold; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-weight: 700; 
             cursor: pointer; 
         }
 
@@ -365,13 +500,14 @@
             max-height: 80vh;
             margin: auto;
             object-fit: contain;
+            border-radius: 12px;
         }
     </style>
 </head>
 <body>
 
     <div class="header-container">
-        <h1>🏋️ Moje Plany Treningowe</h1>
+        <h1>🏋️ Moje Plany</h1>
         <button class="refresh-btn" onclick="loadCloudData()">🔄 Odśwież</button>
     </div>
 
@@ -380,16 +516,16 @@
     <!-- Modale -->
     <div class="modal" id="pdfModal">
         <div class="modal-header">
-            <span id="modalTitle">Podgląd Planu</span>
-            <button class="close-btn" onclick="closePdf()">Zamknij ✖</button>
+            <span id="modalTitle" style="font-weight:700;">Podgląd Planu</span>
+            <button class="close-btn" onclick="closePdf()">Zamknij ✕</button>
         </div>
         <iframe id="pdfFrame" src=""></iframe>
     </div>
 
     <div class="modal" id="photoModal">
         <div class="modal-header">
-            <span>Podgląd zdjęcia</span>
-            <button class="close-btn" onclick="closePhoto()">Zamknij ✖</button>
+            <span style="font-weight:700;">Podgląd zdjęcia</span>
+            <button class="close-btn" onclick="closePhoto()">Zamknij ✕</button>
         </div>
         <img id="fullPhotoImg" class="full-photo" src="" alt="Podgląd zdjęcia">
     </div>
@@ -408,7 +544,6 @@
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
-        // PEŁNA LISTA ĆWICZEŃ (W TYM RDL, WYPADY, FACE PULL)
         const exerciseOptions = [
             "Wyciskanie sztangi na ławce poziomej",
             "Wyciskanie hantli na skosie dodatnim",
@@ -517,19 +652,21 @@
                     const hasEx = cloudData.dailyExercises && cloudData.dailyExercises[plan.id] && cloudData.dailyExercises[plan.id][day] && cloudData.dailyExercises[plan.id][day].length > 0;
                     
                     const isSelected = selectedDay === day;
+                    const hasData = hasNote || hasEx;
                     
                     let btnClass = 'day-btn';
                     if (isSelected) btnClass += ' active';
-                    else if (hasNote || hasEx) btnClass += ' has-note';
 
                     daysHtml += `<button class="${btnClass}" onclick="toggleDay('${plan.id}', '${day}')">
-                        ${(hasNote || hasEx) && !isSelected ? '📝 ' : ''}${day}
+                        ${hasData ? '<span class="status-dot"></span>' : ''}
+                        ${day}
                     </button>`;
                 });
 
                 const currentDayNote = (selectedDay && cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][selectedDay]) || '';
                 const currentExercises = (selectedDay && cloudData.dailyExercises && cloudData.dailyExercises[plan.id] && cloudData.dailyExercises[plan.id][selectedDay]) || [];
 
+                // NOWOCZESNA LISTA SERII
                 let exercisesBlocksHtml = '';
                 currentExercises.forEach((ex, exIndex) => {
                     let setsListHtml = '';
@@ -537,8 +674,11 @@
                     sets.forEach((set, setIndex) => {
                         setsListHtml += `
                             <div class="set-item">
-                                <span>Seria ${setIndex + 1}: <strong>${set.weight} kg</strong> × <strong>${set.reps} powt.</strong></span>
-                                <button class="btn delete" onclick="removeSet('${plan.id}', '${selectedDay}', ${exIndex}, ${setIndex})">✕</button>
+                                <div class="set-data">
+                                    <span class="set-badge">${setIndex + 1}</span>
+                                    <strong>${set.weight}</strong><span>kg</span> × <strong>${set.reps}</strong><span>powt.</span>
+                                </div>
+                                <button class="btn-mini-delete" onclick="removeSet('${plan.id}', '${selectedDay}', ${exIndex}, ${setIndex})" title="Usuń serię">✕</button>
                             </div>
                         `;
                     });
@@ -557,7 +697,7 @@
                         <div class="exercise-block">
                             <div class="ex-header">
                                 <span>💪 ${ex.name}</span>
-                                <button class="btn delete" onclick="removeExercise('${plan.id}', '${selectedDay}', ${exIndex})">Usuń ćwiczenie</button>
+                                <button class="btn delete" style="padding: 4px 8px; font-size: 11px;" onclick="removeExercise('${plan.id}', '${selectedDay}', ${exIndex})">Usuń</button>
                             </div>
                             
                             ${lastRecordBadgeHtml}
@@ -568,7 +708,7 @@
                             <div class="add-set-row">
                                 <input type="number" id="weight_${plan.id}_${exIndex}" class="set-input" placeholder="${lastRecord ? lastRecord.weight : 'kg'}">
                                 <input type="number" id="reps_${plan.id}_${exIndex}" class="set-input" placeholder="${lastRecord ? lastRecord.reps : 'powt.'}">
-                                <button class="btn" onclick="addSet('${plan.id}', '${selectedDay}', ${exIndex})">➕ Dodaj serię</button>
+                                <button class="btn" style="background:#f1f5f9; font-weight:600;" onclick="addSet('${plan.id}', '${selectedDay}', ${exIndex})">➕ Dodaj serię</button>
                             </div>
                         </div>
                     `;
@@ -612,11 +752,11 @@
                     </div>
 
                     <div class="days-section">
-                        <div class="days-title">Notatki dzienne:</div>
+                        <div class="days-title">Dni treningowe</div>
                         <div class="days-grid">${daysHtml}</div>
                         
                         <div class="day-note-container" id="noteBox_${plan.id}" style="display: ${selectedDay ? 'flex' : 'none'};">
-                            <strong>🏋️ Trening w: ${selectedDay}</strong>
+                            <strong style="color:#0f172a; font-size:14px;">🏋️ Trening: ${selectedDay}</strong>
                             
                             <div class="add-ex-box">
                                 <div class="custom-select-container">
@@ -628,18 +768,18 @@
                                         ${customOptionsHtml}
                                     </div>
                                 </div>
-                                <button class="btn add-exercise" onclick="addExercise('${plan.id}', '${selectedDay}')">➕ Dodaj ćwiczenie</button>
+                                <button class="btn add-exercise" onclick="addExercise('${plan.id}', '${selectedDay}')">➕ Dodaj</button>
                             </div>
 
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 ${exercisesBlocksHtml}
                             </div>
 
-                            <hr style="border: none; border-top: 1px solid #eee; margin: 4px 0;">
+                            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 4px 0;">
 
-                            <label for="noteInput_${plan.id}" style="font-size:12px; font-weight:bold; color:#555;">📝 Uwagi do dnia:</label>
+                            <label for="noteInput_${plan.id}" style="font-size:12px; font-weight:700; color:#64748b;">📝 NOTATKA Z DNIA:</label>
                             <textarea id="noteInput_${plan.id}" class="notes-input ${hasNoteContent ? 'has-content' : ''}" oninput="handleNoteInput(this)" placeholder="Wpisz ogólne samopoczucie, ból stawów...">${currentDayNote}</textarea>
-                            <button class="btn save-note" style="background: #e3f2fd; color: #1565c0; border-color: #90caf9;" onclick="saveDayNote('${plan.id}', '${selectedDay}')">💾 Zapisz notatkę</button>
+                            <button class="btn" style="background:#0f172a; color:white; border:none; padding:8px; border-radius:10px; font-weight:600;" onclick="saveDayNote('${plan.id}', '${selectedDay}')">💾 Zapisz notatkę</button>
                         </div>
                     </div>
                 `;
