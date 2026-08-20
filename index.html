@@ -19,7 +19,11 @@
         }
 
         .header-container {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         h1 { 
@@ -28,6 +32,9 @@
             margin: 0; 
             color: #0f172a; 
             letter-spacing: -0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .grid { display: flex; flex-direction: column; gap: 20px; }
@@ -483,7 +490,7 @@
 <body>
 
     <div class="header-container">
-        <h1>🏋️ Moje Plany</h1>
+        <h1>🏋️ Moje Treningi 🏋️</h1>
     </div>
 
     <div class="grid" id="planList"></div>
@@ -826,7 +833,7 @@
                 cloudData.dailyExercises[planId][day][exIndex].sets = [];
             }
 
-            cloudData.dailyExercises[planId][day][exIndex].sets.push({ weight, reps });
+            cloudData.dailyExercises[planId][day].push?.({ weight, reps }) || cloudData.dailyExercises[planId][day][exIndex].sets.push({ weight, reps });
 
             renderPlans();
             await saveCloudData();
