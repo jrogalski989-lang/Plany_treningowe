@@ -19,9 +19,6 @@
         }
 
         .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             margin-bottom: 20px;
         }
 
@@ -31,24 +28,6 @@
             margin: 0; 
             color: #0f172a; 
             letter-spacing: -0.5px;
-        }
-
-        .refresh-btn {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            padding: 8px 14px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            color: #475569;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .refresh-btn:active {
-            transform: scale(0.95);
-            background: #f1f5f9;
         }
 
         .grid { display: flex; flex-direction: column; gap: 20px; }
@@ -169,7 +148,6 @@
             transform: scale(1.05);
         }
 
-        /* SEKCJA DNI TYGODNIA I PIGUŁKI Z KROPKĄ */
         .days-section {
             border-top: 1px dashed #e2e8f0;
             padding-top: 12px;
@@ -233,7 +211,6 @@
             box-shadow: 0 0 8px #4ade80;
         }
 
-        /* ANIMOWANY PANEL DNIA */
         .day-note-container {
             display: none;
             flex-direction: column;
@@ -349,7 +326,6 @@
             font-weight: 500;
         }
 
-        /* PUNKT 4: NOWOCZESNA LISTA SERII */
         .sets-list {
             display: flex;
             flex-direction: column;
@@ -508,7 +484,6 @@
 
     <div class="header-container">
         <h1>🏋️ Moje Plany</h1>
-        <button class="refresh-btn" onclick="loadCloudData()">🔄 Odśwież</button>
     </div>
 
     <div class="grid" id="planList"></div>
@@ -666,7 +641,6 @@
                 const currentDayNote = (selectedDay && cloudData.dailyNotes && cloudData.dailyNotes[plan.id] && cloudData.dailyNotes[plan.id][selectedDay]) || '';
                 const currentExercises = (selectedDay && cloudData.dailyExercises && cloudData.dailyExercises[plan.id] && cloudData.dailyExercises[plan.id][selectedDay]) || [];
 
-                // NOWOCZESNA LISTA SERII
                 let exercisesBlocksHtml = '';
                 currentExercises.forEach((ex, exIndex) => {
                     let setsListHtml = '';
