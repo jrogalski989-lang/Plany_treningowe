@@ -18,23 +18,27 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* WYŚRODKOWANY NAGŁÓWEK Z LOGO */
         .header-container {
             margin-bottom: 24px;
-            text-align: center;
             display: flex;
             justify-content: center;
             align-items: center;
+            width: 100%;
         }
 
-        h1 { 
-            font-size: 22px; 
-            font-weight: 800; 
-            margin: 0; 
-            color: #0f172a; 
-            letter-spacing: -0.5px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+        .header-logo {
+            max-width: 280px;
+            width: 80%;
+            height: auto;
+            display: block;
+            mix-blend-mode: multiply; /* Płynne wtapianie białego tła grafiki w stronę */
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.06));
+            transition: transform 0.2s ease;
+        }
+
+        .header-logo:hover {
+            transform: scale(1.02);
         }
 
         .grid { display: flex; flex-direction: column; gap: 20px; }
@@ -490,7 +494,7 @@
 <body>
 
     <div class="header-container">
-        <h1>🏋️ Moje Treningi 🏋️</h1>
+        <img src="logo.png" alt="jRogalski - can't rush greatness" class="header-logo">
     </div>
 
     <div class="grid" id="planList"></div>
