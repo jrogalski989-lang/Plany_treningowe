@@ -14,33 +14,41 @@
             background: #f8fafc; 
             color: #1e293b; 
             margin: 0; 
-            padding: 16px; 
+            padding: 0 16px 24px 16px; 
             -webkit-font-smoothing: antialiased;
         }
 
-        /* IDEALNIE STOPIONE Z TŁEM LOGO */
+        /* PRZYKLEJONY NAGŁÓWEK (STICKY HEADER JAK W EXCELU) */
         .header-container {
-            margin-bottom: 24px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(248, 250, 252, 0.9); /* Półprzezroczyste tło dopasowane do strony */
+            backdrop-filter: blur(12px);          /* Efekt rozmycia przewijanej treści pod spodem */
+            -webkit-backdrop-filter: blur(12px);
+            margin: 0 -16px 20px -16px;           /* Rozciągnięcie do krawędzi ekranu */
+            padding: 12px 16px 8px 16px;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100%;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
         }
 
+        /* DUŻE LOGO DOPASOWANE DO SZEROKOŚCI IPHONE PRO MAX */
         .header-logo {
-            max-width: 340px;
-            width: 90%;
+            max-width: 440px;                     /* Idealna szerokość pod iPhone Pro Max */
+            width: 95%;
             height: auto;
             display: block;
             mix-blend-mode: multiply;
             filter: contrast(1.18) brightness(1.02);
-            -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 50%, black 50%, transparent 95%);
-            mask-image: radial-gradient(ellipse 85% 75% at 50% 50%, black 50%, transparent 95%);
+            -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 60%, transparent 98%);
+            mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 60%, transparent 98%);
             transition: transform 0.2s ease;
         }
 
         .header-logo:hover {
-            transform: scale(1.02);
+            transform: scale(1.01);
         }
 
         .grid { display: flex; flex-direction: column; gap: 20px; }
@@ -495,6 +503,7 @@
 </head>
 <body>
 
+    <!-- PRZYKLEJONY NAGŁÓWEK Z DUŻYM LOGO -->
     <div class="header-container">
         <img src="logo.png" onerror="this.onerror=null; this.src='logo.jpg';" alt="jRogalski - can't rush greatness" class="header-logo">
     </div>
