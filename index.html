@@ -309,7 +309,7 @@
             font-size: 12px;
         }
 
-        /* POLE NOTATKI - DOMYŚLNE (PUSTE) */
+        /* POLE NOTATKI */
         .notes-input {
             width: 100%;
             height: 50px;
@@ -323,7 +323,6 @@
             transition: height 0.25s ease, border-color 0.25s ease;
         }
 
-        /* POLE NOTATKI - POWIĘKSZONE GDY MA WPISANĄ TREŚĆ */
         .notes-input.has-content {
             height: 110px;
             border-color: #90caf9;
@@ -409,17 +408,21 @@
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
+        // PEŁNA LISTA ĆWICZEŃ (W TYM RDL, WYPADY, FACE PULL)
         const exerciseOptions = [
             "Wyciskanie sztangi na ławce poziomej",
             "Wyciskanie hantli na skosie dodatnim",
             "Przysiad ze sztangą",
             "Martwy ciąg",
+            "RDL (Rumuński martwy ciąg)",
             "Wiosłowanie sztangą",
             "Podciąganie nachwytem",
             "Podciąganie podchwytem",
             "Ściąganie w dół na wyciągu",
             "Suwnica",
             "Suwnica jednonóż",
+            "Wypady",
+            "Face pull",
             "Wyciskanie żołnierskie (OHP)",
             "Uginanie ramion ze sztangą (Biceps)",
             "Prostowanie ramion na wyciągu (Triceps)",
@@ -644,7 +647,6 @@
             });
         }
 
-        // Automatyczne powiększanie / zmniejszanie pola notatki podczas wpisywania
         function handleNoteInput(textarea) {
             if (textarea.value.trim().length > 0) {
                 textarea.classList.add('has-content');
