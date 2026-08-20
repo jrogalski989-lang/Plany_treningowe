@@ -265,6 +265,19 @@
             color: #2e7d32;
         }
 
+        /* STYL PLAKIETKI HISTORII POPRZEDNIEGO CIĘŻARU */
+        .last-record-badge {
+            background: #e3f2fd;
+            color: #0d47a1;
+            font-size: 11.5px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1px solid #bbdefb;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         .sets-list {
             display: flex;
             flex-direction: column;
@@ -388,7 +401,6 @@
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
-        // ZAKTUALIZOWANA LISTA ĆWICZEŃ Z NOWYMI POZYCJAMI
         const exerciseOptions = [
             "Wyciskanie sztangi na ławce poziomej",
             "Wyciskanie hantli na skosie dodatnim",
@@ -413,6 +425,37 @@
         let currentPhotoType = null;
         let activeDayKey = {};
         let selectedExercisePerPlan = {};
+
+        // Wyszukiwanie ostatniego zapisanego rekordu danego ćwiczenia
+        function getLastRecordForExercise(exerciseName, currentPlanId, currentDay) {
+            if (!cloudData.dailyExercises) return null;
+
+            for (let p of plans) {
+                const planId = p.id;
+                if (!cloudData.dailyExercises[planId]) continue;
+
+                const revDays = [...daysOfWeek].reverse();
+                for (let day of revDays) {
+                    if (planId === currentPlanId && day === currentDay) continue;
+
+                    const dayExList = cloudData.dailyExercises[planId][day];
+                    if (!dayExList) continue;
+
+                    for (let ex of dayExList) {
+                        if (ex.name === exerciseName && ex.sets && ex.sets.length > 0) {
+                            let bestSet = ex.sets.reduce((max, s) => parseFloat(s.weight) > parseFloat(max.weight) ? s : max, ex.sets[0]);
+                            return {
+                                weight: bestSet.weight,
+                                reps: bestSet.reps,
+                                weekName: p.week.replace("Tydzień ", ""),
+                                day: day
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
 
         async function loadCloudData() {
             try {
@@ -490,18 +533,32 @@
                         `;
                     });
 
+                    // Pobranie ostatniego wyniku z historii
+                    const lastRecord = getLastRecordForExercise(ex.name, plan.id, selectedDay);
+                    let lastRecordBadgeHtml = '';
+                    if (lastRecord) {
+                        lastRecordBadgeHtml = `
+                            <div class="last-record-badge">
+                                🕒 Ostatnio: <strong>${lastRecord.weight} kg × ${lastRecord.reps} powt.</strong> (${lastRecord.day}, ${lastRecord.weekName})
+                            </div>
+                        `;
+                    }
+
                     exercisesBlocksHtml += `
                         <div class="exercise-block">
                             <div class="ex-header">
                                 <span>💪 ${ex.name}</span>
                                 <button class="btn delete" onclick="removeExercise('${plan.id}', '${selectedDay}', ${exIndex})">Usuń ćwiczenie</button>
                             </div>
+                            
+                            ${lastRecordBadgeHtml}
+
                             <div class="sets-list">
                                 ${setsListHtml}
                             </div>
                             <div class="add-set-row">
-                                <input type="number" id="weight_${plan.id}_${exIndex}" class="set-input" placeholder="kg">
-                                <input type="number" id="reps_${plan.id}_${exIndex}" class="set-input" placeholder="powt.">
+                                <input type="number" id="weight_${plan.id}_${exIndex}" class="set-input" placeholder="${lastRecord ? lastRecord.weight : 'kg'}">
+                                <input type="number" id="reps_${plan.id}_${exIndex}" class="set-input" placeholder="${lastRecord ? lastRecord.reps : 'powt.'}">
                                 <button class="btn" onclick="addSet('${plan.id}', '${selectedDay}', ${exIndex})">➕ Dodaj serię</button>
                             </div>
                         </div>
@@ -629,8 +686,9 @@
             const weightInput = document.getElementById(`weight_${planId}_${exIndex}`);
             const repsInput = document.getElementById(`reps_${planId}_${exIndex}`);
 
-            const weight = weightInput.value || 0;
-            const reps = repsInput.value || 0;
+            // Jeśli pole jest puste, weź wartość z placeholderu (lub 0)
+            const weight = weightInput.value !== "" ? weightInput.value : (weightInput.placeholder !== "kg" ? weightInput.placeholder : 0);
+            const reps = repsInput.value !== "" ? repsInput.value : (repsInput.placeholder !== "powt." ? repsInput.placeholder : 0);
 
             if (!cloudData.dailyExercises[planId][day][exIndex].sets) {
                 cloudData.dailyExercises[planId][day][exIndex].sets = [];
