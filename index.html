@@ -568,6 +568,8 @@
         const FIREBASE_URL = "https://plan-treningowy-efc6d-default-rtdb.firebaseio.com/";
 
         const plans = [
+            { id: "week_0709", week: "Tydzień 07.09 - 13.09", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
+            { id: "week_3108", week: "Tydzień 31.08 - 06.09", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
             { id: "week_2408", week: "Tydzień 24.08 - 30.08", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
             { id: "week_1708", week: "Tydzień 17.08 - 23.08", url: "https://drive.google.com/file/d/1p8z3edTdXQkY-hO_jiSdlxd2xpFOsDjN/preview" },
             { id: "week_1008", week: "Tydzień 10.08 - 16.08", url: "https://drive.google.com/file/d/1hYGXivHinwIpCMWCDC0pESePvVgAahC0/preview" },
@@ -822,7 +824,6 @@
             });
         }
 
-        // AUTOMATYCZNY ZAPIS NOTATKI Z MECHANIZMEM DEBOUNCE
         function handleAutoSaveNote(textarea, planId, day) {
             if (textarea.value.trim().length > 0) {
                 textarea.classList.add('has-content');
