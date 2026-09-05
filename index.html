@@ -186,12 +186,24 @@
             padding: 8px 10px;
         }
 
+        .measurement-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .measurement-label {
             font-size: 11px;
             font-weight: 700;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.3px;
+        }
+
+        .measurement-prev-hint {
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 500;
         }
 
         .measurement-input-wrap {
@@ -223,6 +235,25 @@
             font-size: 11px;
             font-weight: 600;
             color: #94a3b8;
+        }
+
+        .measurement-diff-badge {
+            font-size: 11px;
+            font-weight: 700;
+            min-height: 14px;
+            margin-top: 2px;
+        }
+
+        .diff-plus {
+            color: #16a34a; /* Zielony na plus */
+        }
+
+        .diff-minus {
+            color: #dc2626; /* Czerwony na minus */
+        }
+
+        .diff-zero {
+            color: #64748b; /* Neutralny */
         }
 
         .days-section {
@@ -673,10 +704,45 @@
         let currentActivePlanId = null;
         let currentPhotoType = null;
         let activeDayKey = {};
-        let activeMeasurementsKey = {}; // Sterowanie otwarciem kafelka pomiarów dla danego tygodnia
+        let activeMeasurementsKey = {};
         let selectedExercisePerPlan = {};
         let noteSaveTimeouts = {};
         let measurementSaveTimeouts = {};
+
+        // Pobieranie wartości pomiaru z wcześniejszego tygodnia
+        function getPreviousWeekMeasurement(currentPlanId, field) {
+            if (!cloudData.bodyMeasurements) return null;
+            const currentIndex = plans.findIndex(p => p.id === currentPlanId);
+            if (currentIndex === -1) return null;
+
+            for (let i = currentIndex + 1; i < plans.length; i++) {
+                const prevPlanId = plans[i].id;
+                if (cloudData.bodyMeasurements[prevPlanId] && cloudData.bodyMeasurements[prevPlanId][field]) {
+                    return parseFloat(cloudData.bodyMeasurements[prevPlanId][field]);
+                }
+            }
+            return null;
+        }
+
+        function calculateDiffHtml(currentVal, prevVal, unit) {
+            if (currentVal === null || currentVal === undefined || currentVal === "" || prevVal === null || prevVal === undefined) {
+                return "";
+            }
+            const cur = parseFloat(currentVal);
+            const prev = parseFloat(prevVal);
+            if (isNaN(cur) || isNaN(prev)) return "";
+
+            const diff = (cur - prev).toFixed(1);
+            const numDiff = parseFloat(diff);
+
+            if (numDiff > 0) {
+                return `<span class="measurement-diff-badge diff-plus">+${diff} ${unit}</span>`;
+            } else if (numDiff < 0) {
+                return `<span class="measurement-diff-badge diff-minus">${diff} ${unit}</span>`;
+            } else {
+                return `<span class="measurement-diff-badge diff-zero">0.0 ${unit}</span>`;
+            }
+        }
 
         function getLastRecordForExercise(exerciseName, currentPlanId, currentDay) {
             if (!cloudData.dailyExercises) return null;
@@ -753,6 +819,13 @@
 
                 const planMeasurements = (cloudData.bodyMeasurements && cloudData.bodyMeasurements[plan.id]) || {};
                 const hasAnyMeasurement = planMeasurements.weight || planMeasurements.waist || planMeasurements.chest || planMeasurements.bicep || planMeasurements.thigh;
+
+                // Poprzednie wartości dla każdego z 5 pól
+                const prevWeight = getPreviousWeekMeasurement(plan.id, 'weight');
+                const prevWaist = getPreviousWeekMeasurement(plan.id, 'waist');
+                const prevChest = getPreviousWeekMeasurement(plan.id, 'chest');
+                const prevBicep = getPreviousWeekMeasurement(plan.id, 'bicep');
+                const prevThigh = getPreviousWeekMeasurement(plan.id, 'thigh');
 
                 const card = document.createElement('div');
                 card.className = `card ${isCompleted ? 'completed' : ''}`;
@@ -866,7 +939,7 @@
                         </button>
                     </div>
 
-                    <!-- ROZWIJANY PANEL POMIARÓW -->
+                    <!-- ROZWIJANY PANEL POMIARÓW Z HISTORIĄ I RÓŻNICĄ -->
                     <div class="measurements-panel" id="measurementsBox_${plan.id}" style="display: ${isMeasurementsOpen ? 'flex' : 'none'};">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <strong style="color: #0f172a; font-size: 13px;">📏 Pomiary obwodów ciała</strong>
@@ -874,40 +947,69 @@
                         </div>
                         
                         <div class="measurements-grid">
+                            <!-- Waga -->
                             <div class="measurement-item">
-                                <span class="measurement-label">Waga</span>
+                                <div class="measurement-header-row">
+                                    <span class="measurement-label">Waga</span>
+                                    <span class="measurement-prev-hint">${prevWeight !== null ? `Poprz: ${prevWeight}` : ''}</span>
+                                </div>
                                 <div class="measurement-input-wrap">
-                                    <input type="number" step="0.1" class="measurement-input" value="${planMeasurements.weight || ''}" placeholder="0.0" oninput="handleAutoSaveMeasurement('${plan.id}', 'weight', this.value)">
+                                    <input type="number" step="0.1" class="measurement-input" value="${planMeasurements.weight || ''}" placeholder="${prevWeight !== null ? prevWeight : '0.0'}" oninput="handleAutoSaveMeasurement('${plan.id}', 'weight', this.value, ${prevWeight !== null ? prevWeight : 'null'}, 'kg')">
                                     <span class="measurement-unit">kg</span>
                                 </div>
+                                <div id="diff_${plan.id}_weight">${calculateDiffHtml(planMeasurements.weight, prevWeight, 'kg')}</div>
                             </div>
+
+                            <!-- Pas -->
                             <div class="measurement-item">
-                                <span class="measurement-label">Pas</span>
+                                <div class="measurement-header-row">
+                                    <span class="measurement-label">Pas</span>
+                                    <span class="measurement-prev-hint">${prevWaist !== null ? `Poprz: ${prevWaist}` : ''}</span>
+                                </div>
                                 <div class="measurement-input-wrap">
-                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.waist || ''}" placeholder="0.0" oninput="handleAutoSaveMeasurement('${plan.id}', 'waist', this.value)">
+                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.waist || ''}" placeholder="${prevWaist !== null ? prevWaist : '0.0'}" oninput="handleAutoSaveMeasurement('${plan.id}', 'waist', this.value, ${prevWaist !== null ? prevWaist : 'null'}, 'cm')">
                                     <span class="measurement-unit">cm</span>
                                 </div>
+                                <div id="diff_${plan.id}_waist">${calculateDiffHtml(planMeasurements.waist, prevWaist, 'cm')}</div>
                             </div>
+
+                            <!-- Klatka piersiowa -->
                             <div class="measurement-item">
-                                <span class="measurement-label">Klatka piersiowa</span>
+                                <div class="measurement-header-row">
+                                    <span class="measurement-label">Klatka</span>
+                                    <span class="measurement-prev-hint">${prevChest !== null ? `Poprz: ${prevChest}` : ''}</span>
+                                </div>
                                 <div class="measurement-input-wrap">
-                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.chest || ''}" placeholder="0.0" oninput="handleAutoSaveMeasurement('${plan.id}', 'chest', this.value)">
+                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.chest || ''}" placeholder="${prevChest !== null ? prevChest : '0.0'}" oninput="handleAutoSaveMeasurement('${plan.id}', 'chest', this.value, ${prevChest !== null ? prevChest : 'null'}, 'cm')">
                                     <span class="measurement-unit">cm</span>
                                 </div>
+                                <div id="diff_${plan.id}_chest">${calculateDiffHtml(planMeasurements.chest, prevChest, 'cm')}</div>
                             </div>
+
+                            <!-- Biceps -->
                             <div class="measurement-item">
-                                <span class="measurement-label">Biceps</span>
+                                <div class="measurement-header-row">
+                                    <span class="measurement-label">Biceps</span>
+                                    <span class="measurement-prev-hint">${prevBicep !== null ? `Poprz: ${prevBicep}` : ''}</span>
+                                </div>
                                 <div class="measurement-input-wrap">
-                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.bicep || ''}" placeholder="0.0" oninput="handleAutoSaveMeasurement('${plan.id}', 'bicep', this.value)">
+                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.bicep || ''}" placeholder="${prevBicep !== null ? prevBicep : '0.0'}" oninput="handleAutoSaveMeasurement('${plan.id}', 'bicep', this.value, ${prevBicep !== null ? prevBicep : 'null'}, 'cm')">
                                     <span class="measurement-unit">cm</span>
                                 </div>
+                                <div id="diff_${plan.id}_bicep">${calculateDiffHtml(planMeasurements.bicep, prevBicep, 'cm')}</div>
                             </div>
+
+                            <!-- Udo -->
                             <div class="measurement-item">
-                                <span class="measurement-label">Udo</span>
+                                <div class="measurement-header-row">
+                                    <span class="measurement-label">Udo</span>
+                                    <span class="measurement-prev-hint">${prevThigh !== null ? `Poprz: ${prevThigh}` : ''}</span>
+                                </div>
                                 <div class="measurement-input-wrap">
-                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.thigh || ''}" placeholder="0.0" oninput="handleAutoSaveMeasurement('${plan.id}', 'thigh', this.value)">
+                                    <input type="number" step="0.5" class="measurement-input" value="${planMeasurements.thigh || ''}" placeholder="${prevThigh !== null ? prevThigh : '0.0'}" oninput="handleAutoSaveMeasurement('${plan.id}', 'thigh', this.value, ${prevThigh !== null ? prevThigh : 'null'}, 'cm')">
                                     <span class="measurement-unit">cm</span>
                                 </div>
+                                <div id="diff_${plan.id}_thigh">${calculateDiffHtml(planMeasurements.thigh, prevThigh, 'cm')}</div>
                             </div>
                         </div>
                     </div>
@@ -950,13 +1052,19 @@
             });
         }
 
-        // ZARZĄDZANIE POMIARAMI
         function toggleMeasurements(planId) {
             activeMeasurementsKey[planId] = !activeMeasurementsKey[planId];
             renderPlans();
         }
 
-        function handleAutoSaveMeasurement(planId, field, value) {
+        // DYNAMICZNE WYLICZANIE DELTY I ZAPIS W CHMURZE
+        function handleAutoSaveMeasurement(planId, field, value, prevVal, unit) {
+            // Natychmiastowa aktualizacja wskaźnika różnicy na żywo
+            const diffEl = document.getElementById(`diff_${planId}_${field}`);
+            if (diffEl) {
+                diffEl.innerHTML = calculateDiffHtml(value, prevVal, unit);
+            }
+
             const statusEl = document.getElementById(`measurementStatus_${planId}`);
             if (statusEl) {
                 statusEl.innerText = "Zapisywanie... ⏳";
@@ -985,7 +1093,6 @@
             }, 600);
         }
 
-        // AUTOMATYCZNY ZAPIS NOTATKI Z DEBOUNCE
         function handleAutoSaveNote(textarea, planId, day) {
             if (textarea.value.trim().length > 0) {
                 textarea.classList.add('has-content');
@@ -1089,7 +1196,7 @@
                 cloudData.dailyExercises[planId][day][exIndex].sets = [];
             }
 
-            cloudData.dailyExercises[planId][day][exIndex].sets.push({ weight, reps });
+            cloudData.dailyExercises[planId][day].push?.({ weight, reps }) || cloudData.dailyExercises[planId][day][exIndex].sets.push({ weight, reps });
 
             renderPlans();
             await saveCloudData();
