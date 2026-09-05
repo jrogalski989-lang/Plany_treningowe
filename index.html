@@ -63,6 +63,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .card-title {
@@ -80,6 +82,12 @@
             color: #10b981;
         }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .btn {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -95,6 +103,7 @@
             align-items: center;
             justify-content: center;
             gap: 4px;
+            white-space: nowrap;
         }
 
         .btn:active {
@@ -106,6 +115,17 @@
             color: white;
             border-color: #059669;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn.pdf-export {
+            background: #f1f5f9;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+
+        .btn.pdf-export:hover {
+            background: #e2e8f0;
+            color: #0f172a;
         }
 
         .btn.delete {
@@ -244,17 +264,9 @@
             margin-top: 2px;
         }
 
-        .diff-plus {
-            color: #16a34a; /* Zielony na plus */
-        }
-
-        .diff-minus {
-            color: #dc2626; /* Czerwony na minus */
-        }
-
-        .diff-zero {
-            color: #64748b; /* Neutralny */
-        }
+        .diff-plus { color: #16a34a; }
+        .diff-minus { color: #dc2626; }
+        .diff-zero { color: #64748b; }
 
         .days-section {
             border-top: 1px dashed #e2e8f0;
@@ -709,7 +721,6 @@
         let noteSaveTimeouts = {};
         let measurementSaveTimeouts = {};
 
-        // Pobieranie wartości pomiaru z wcześniejszego tygodnia
         function getPreviousWeekMeasurement(currentPlanId, field) {
             if (!cloudData.bodyMeasurements) return null;
             const currentIndex = plans.findIndex(p => p.id === currentPlanId);
@@ -820,7 +831,6 @@
                 const planMeasurements = (cloudData.bodyMeasurements && cloudData.bodyMeasurements[plan.id]) || {};
                 const hasAnyMeasurement = planMeasurements.weight || planMeasurements.waist || planMeasurements.chest || planMeasurements.bicep || planMeasurements.thigh;
 
-                // Poprzednie wartości dla każdego z 5 pól
                 const prevWeight = getPreviousWeekMeasurement(plan.id, 'weight');
                 const prevWaist = getPreviousWeekMeasurement(plan.id, 'waist');
                 const prevChest = getPreviousWeekMeasurement(plan.id, 'chest');
@@ -909,9 +919,14 @@
                 card.innerHTML = `
                     <div class="card-header">
                         <span class="card-title" onclick="openPdf('${plan.url}', '${plan.week}')">📅 ${plan.week}</span>
-                        <button class="btn ${isCompleted ? 'done' : ''}" onclick="toggleStatus('${plan.id}')">
-                            ${isCompleted ? 'Zakończony ✅' : 'W trakcie ⏳'}
-                        </button>
+                        <div class="header-actions">
+                            <button class="btn pdf-export" onclick="generateWeekPdf('${plan.id}')" title="Wygeneruj raport PDF z tego tygodnia">
+                                📄 Raport PDF
+                            </button>
+                            <button class="btn ${isCompleted ? 'done' : ''}" onclick="toggleStatus('${plan.id}')">
+                                ${isCompleted ? 'Zakończony ✅' : 'W trakcie ⏳'}
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="photos-container">
@@ -933,13 +948,11 @@
                             }
                         </div>
 
-                        <!-- KAFELEK POMIARÓW CIAŁA -->
                         <button class="btn" style="${isMeasurementsOpen ? 'background:#0f172a; color:#ffffff; border-color:#0f172a;' : (hasAnyMeasurement ? 'border-color:#10b981; color:#0f766e;' : '')}" onclick="toggleMeasurements('${plan.id}')">
                             ${hasAnyMeasurement && !isMeasurementsOpen ? '📏 Pomiary (zapisane)' : '📏 Pomiary'}
                         </button>
                     </div>
 
-                    <!-- ROZWIJANY PANEL POMIARÓW Z HISTORIĄ I RÓŻNICĄ -->
                     <div class="measurements-panel" id="measurementsBox_${plan.id}" style="display: ${isMeasurementsOpen ? 'flex' : 'none'};">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <strong style="color: #0f172a; font-size: 13px;">📏 Pomiary obwodów ciała</strong>
@@ -947,7 +960,6 @@
                         </div>
                         
                         <div class="measurements-grid">
-                            <!-- Waga -->
                             <div class="measurement-item">
                                 <div class="measurement-header-row">
                                     <span class="measurement-label">Waga</span>
@@ -960,7 +972,6 @@
                                 <div id="diff_${plan.id}_weight">${calculateDiffHtml(planMeasurements.weight, prevWeight, 'kg')}</div>
                             </div>
 
-                            <!-- Pas -->
                             <div class="measurement-item">
                                 <div class="measurement-header-row">
                                     <span class="measurement-label">Pas</span>
@@ -973,7 +984,6 @@
                                 <div id="diff_${plan.id}_waist">${calculateDiffHtml(planMeasurements.waist, prevWaist, 'cm')}</div>
                             </div>
 
-                            <!-- Klatka piersiowa -->
                             <div class="measurement-item">
                                 <div class="measurement-header-row">
                                     <span class="measurement-label">Klatka</span>
@@ -986,7 +996,6 @@
                                 <div id="diff_${plan.id}_chest">${calculateDiffHtml(planMeasurements.chest, prevChest, 'cm')}</div>
                             </div>
 
-                            <!-- Biceps -->
                             <div class="measurement-item">
                                 <div class="measurement-header-row">
                                     <span class="measurement-label">Biceps</span>
@@ -999,7 +1008,6 @@
                                 <div id="diff_${plan.id}_bicep">${calculateDiffHtml(planMeasurements.bicep, prevBicep, 'cm')}</div>
                             </div>
 
-                            <!-- Udo -->
                             <div class="measurement-item">
                                 <div class="measurement-header-row">
                                     <span class="measurement-label">Udo</span>
@@ -1052,14 +1060,215 @@
             });
         }
 
+        // GENEROWANIE RAPORTU PODSUMOWANIA TYGODNIA DO PDF
+        function generateWeekPdf(planId) {
+            const plan = plans.find(p => p.id === planId);
+            if (!plan) return;
+
+            const measurements = (cloudData.bodyMeasurements && cloudData.bodyMeasurements[planId]) || {};
+            const dailyEx = (cloudData.dailyExercises && cloudData.dailyExercises[planId]) || {};
+            const dailyNotes = (cloudData.dailyNotes && cloudData.dailyNotes[planId]) || {};
+
+            let measurementsHtml = `
+                <div class="pdf-section">
+                    <div class="pdf-section-title">📏 Pomiary ciała w tym tygodniu</div>
+                    <div class="pdf-measurements-grid">
+                        <div class="pdf-m-box"><strong>Waga:</strong> ${measurements.weight ? measurements.weight + ' kg' : '—'}</div>
+                        <div class="pdf-m-box"><strong>Pas:</strong> ${measurements.waist ? measurements.waist + ' cm' : '—'}</div>
+                        <div class="pdf-m-box"><strong>Klatka:</strong> ${measurements.chest ? measurements.chest + ' cm' : '—'}</div>
+                        <div class="pdf-m-box"><strong>Biceps:</strong> ${measurements.bicep ? measurements.bicep + ' cm' : '—'}</div>
+                        <div class="pdf-m-box"><strong>Udo:</strong> ${measurements.thigh ? measurements.thigh + ' cm' : '—'}</div>
+                    </div>
+                </div>
+            `;
+
+            let daysReportHtml = '';
+            let hasAnyActivity = false;
+
+            daysOfWeek.forEach(day => {
+                const exList = dailyEx[day] || [];
+                const note = dailyNotes[day] || '';
+
+                if (exList.length > 0 || note.trim().length > 0) {
+                    hasAnyActivity = true;
+                    let exHtml = '';
+
+                    exList.forEach((ex, idx) => {
+                        let setsStr = '';
+                        if (ex.sets && ex.sets.length > 0) {
+                            setsStr = ex.sets.map((s, sIdx) => `Seria ${sIdx + 1}: <strong>${s.weight} kg</strong> × <strong>${s.reps} powt.</strong>`).join(' | ');
+                        } else {
+                            setsStr = '<em>Brak wpisanych serii</em>';
+                        }
+
+                        exHtml += `
+                            <div class="pdf-exercise-row">
+                                <div class="pdf-ex-name">💪 ${ex.name}</div>
+                                <div class="pdf-ex-sets">${setsStr}</div>
+                            </div>
+                        `;
+                    });
+
+                    let noteHtml = '';
+                    if (note.trim().length > 0) {
+                        noteHtml = `
+                            <div class="pdf-day-note">
+                                <strong>📝 Notatka z dnia:</strong> ${note}
+                            </div>
+                        `;
+                    }
+
+                    daysReportHtml += `
+                        <div class="pdf-day-card">
+                            <div class="pdf-day-title">📅 ${day}</div>
+                            ${exHtml}
+                            ${noteHtml}
+                        </div>
+                    `;
+                }
+            });
+
+            if (!hasAnyActivity) {
+                daysReportHtml = `<div style="padding:15px; color:#64748b; font-style:italic;">Brak zarejestrowanych ćwiczeń i notatek w tym tygodniu.</div>`;
+            }
+
+            const reportWindow = window.open('', '_blank');
+            reportWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="pl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Raport Treningowy - ${plan.week}</title>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                            color: #0f172a;
+                            background: #ffffff;
+                            margin: 20px;
+                            padding: 0;
+                        }
+                        .pdf-header {
+                            border-bottom: 2px solid #0f172a;
+                            padding-bottom: 12px;
+                            margin-bottom: 20px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-end;
+                        }
+                        .pdf-title {
+                            font-size: 24px;
+                            font-weight: 800;
+                            margin: 0;
+                            color: #0f172a;
+                        }
+                        .pdf-date {
+                            font-size: 12px;
+                            color: #64748b;
+                        }
+                        .pdf-section {
+                            margin-bottom: 20px;
+                        }
+                        .pdf-section-title {
+                            font-size: 15px;
+                            font-weight: 700;
+                            color: #334155;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            margin-bottom: 10px;
+                            border-bottom: 1px solid #e2e8f0;
+                            padding-bottom: 4px;
+                        }
+                        .pdf-measurements-grid {
+                            display: flex;
+                            gap: 10px;
+                            flex-wrap: wrap;
+                        }
+                        .pdf-m-box {
+                            background: #f8fafc;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
+                            padding: 8px 14px;
+                            font-size: 13px;
+                            flex: 1;
+                            min-width: 100px;
+                        }
+                        .pdf-day-card {
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
+                            padding: 12px 14px;
+                            margin-bottom: 14px;
+                            page-break-inside: avoid;
+                        }
+                        .pdf-day-title {
+                            font-size: 16px;
+                            font-weight: 700;
+                            color: #0f172a;
+                            margin-bottom: 10px;
+                            border-bottom: 1px dashed #cbd5e1;
+                            padding-bottom: 4px;
+                        }
+                        .pdf-exercise-row {
+                            margin-bottom: 8px;
+                            padding-left: 6px;
+                        }
+                        .pdf-ex-name {
+                            font-weight: 700;
+                            font-size: 14px;
+                            color: #1e293b;
+                        }
+                        .pdf-ex-sets {
+                            font-size: 13px;
+                            color: #334155;
+                            margin-top: 2px;
+                        }
+                        .pdf-day-note {
+                            background: #f1f5f9;
+                            border-left: 3px solid #3b82f6;
+                            padding: 8px 10px;
+                            border-radius: 4px;
+                            font-size: 12.5px;
+                            margin-top: 10px;
+                            color: #1e293b;
+                        }
+                        @media print {
+                            body { margin: 0; }
+                            @page { size: A4; margin: 15mm; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="pdf-header">
+                        <div>
+                            <h1 class="pdf-title">🏋️ ${plan.week}</h1>
+                            <div style="font-size: 13px; color: #475569; margin-top: 4px;">Raport podsumowujący wykonany trening i pomiary</div>
+                        </div>
+                        <div class="pdf-date">Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</div>
+                    </div>
+
+                    ${measurementsHtml}
+
+                    <div class="pdf-section">
+                        <div class="pdf-section-title">📋 Wykonane treningi i notatki</div>
+                        ${daysReportHtml}
+                    </div>
+
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            reportWindow.document.close();
+        }
+
         function toggleMeasurements(planId) {
             activeMeasurementsKey[planId] = !activeMeasurementsKey[planId];
             renderPlans();
         }
 
-        // DYNAMICZNE WYLICZANIE DELTY I ZAPIS W CHMURZE
         function handleAutoSaveMeasurement(planId, field, value, prevVal, unit) {
-            // Natychmiastowa aktualizacja wskaźnika różnicy na żywo
             const diffEl = document.getElementById(`diff_${planId}_${field}`);
             if (diffEl) {
                 diffEl.innerHTML = calculateDiffHtml(value, prevVal, unit);
