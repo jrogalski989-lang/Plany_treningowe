@@ -76,13 +76,17 @@
         .week-thumb-header {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 3px;
         }
 
         .week-thumb-title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 800;
             color: #0f172a;
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .week-thumb-dates {
@@ -727,7 +731,6 @@
         <canvas id="transparentLogoCanvas"></canvas>
     </div>
 
-    <!-- GŁÓWNY KONTENER DLA WIDOKU SIATKI LUB POJEDYNCZEGO TYGODNIA -->
     <div id="appContainer"></div>
 
     <!-- Modale -->
@@ -796,6 +799,40 @@
             { id: "week_0408", week: "Tydzień 04.08 - 09.08", dates: "04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
         ];
 
+        const monthNames = {
+            "01": "Styczeń",
+            "02": "Luty",
+            "03": "Marzec",
+            "04": "Kwiecień",
+            "05": "Maj",
+            "06": "Czerwiec",
+            "07": "Lipiec",
+            "08": "Sierpień",
+            "09": "Wrzesień",
+            "10": "Październik",
+            "11": "Listopad",
+            "12": "Grudzień"
+        };
+
+        // Automatyczne wyznaczanie nazwy miesiąca na podstawie zakresu dat
+        function getMonthLabelFromDates(datesStr) {
+            if (!datesStr) return "Miesiąc";
+            const matches = datesStr.match(/\.(\d{2})/g);
+            if (!matches || matches.length < 2) return "Miesiąc";
+
+            const m1 = matches[0].replace(".", "");
+            const m2 = matches[1].replace(".", "");
+
+            const name1 = monthNames[m1] || m1;
+            const name2 = monthNames[m2] || m2;
+
+            if (m1 === m2) {
+                return name1;
+            } else {
+                return `${name1} / ${name2}`;
+            }
+        }
+
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
         const exerciseOptions = [
@@ -822,7 +859,7 @@
         ];
 
         let cloudData = { statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {}, bodyMeasurements: {} };
-        let activeSelectedPlanId = null; // null = widok główny (kafelki), string = widok wybranego tygodnia
+        let activeSelectedPlanId = null;
         let currentPhotoType = null;
         let activeDayKey = {};
         let activeMeasurementsKey = {};
@@ -926,7 +963,6 @@
             }
         }
 
-        // GŁÓWNY ROUTER WIDOKÓW
         function renderView() {
             const container = document.getElementById('appContainer');
             container.innerHTML = '';
@@ -938,7 +974,7 @@
             }
         }
 
-        // WIDOK 1: SIATKA TYGODNI (STRONA GŁÓWNA)
+        // WIDOK 1: SIATKA Z NAZWAMI MIESIĘCY
         function renderOverviewGrid(container) {
             const grid = document.createElement('div');
             grid.className = 'weeks-overview-grid';
@@ -946,6 +982,8 @@
             plans.forEach(plan => {
                 const isCompleted = cloudData.statuses && cloudData.statuses[plan.id] === true;
                 const photoData = cloudData.photos && cloudData.photos[plan.id];
+                const rawDates = plan.dates || plan.week.replace("Tydzień ", "");
+                const monthTitle = getMonthLabelFromDates(rawDates);
 
                 const card = document.createElement('div');
                 card.className = `week-thumb-card ${isCompleted ? 'completed' : ''}`;
@@ -953,8 +991,8 @@
 
                 card.innerHTML = `
                     <div class="week-thumb-header">
-                        <span class="week-thumb-title">📅 ${plan.week.split(' ')[0]}</span>
-                        <span class="week-thumb-dates">${plan.dates || plan.week.replace("Tydzień ", "")}</span>
+                        <span class="week-thumb-title">🗓️ ${monthTitle}</span>
+                        <span class="week-thumb-dates">${rawDates}</span>
                     </div>
 
                     <div class="week-thumb-footer">
@@ -1005,7 +1043,6 @@
             const viewWrapper = document.createElement('div');
             viewWrapper.className = 'single-week-view';
 
-            // Pasek nawigacyjny z przyciskiem powrotu
             const navBar = document.createElement('div');
             navBar.className = 'back-nav-bar';
             navBar.innerHTML = `
@@ -1442,7 +1479,9 @@
 
         function toggleCustomDropdown(planId) {
             const box = document.getElementById(`optionsBox_${planId}`);
-            if (box) box.classList.toggle('open');
+            if (box) {
+                box.classList.toggle('open');
+            }
         }
 
         function selectCustomOption(planId, exName) {
@@ -1515,7 +1554,7 @@
 
         async function removeExercise(planId, day, exIndex) {
             cloudData.dailyExercises[planId][day].splice(exIndex, 1);
-            renderView();
+            renderPlans();
             await saveCloudData();
         }
 
