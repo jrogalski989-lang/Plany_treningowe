@@ -119,6 +119,12 @@
             background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
         }
 
+        .week-thumb-card.admin-hidden {
+            opacity: 0.65;
+            border-style: dashed;
+            background: #f8fafc;
+        }
+
         .week-thumb-header {
             display: flex;
             flex-direction: column;
@@ -148,6 +154,8 @@
             margin-top: 6px;
             border-top: 1px dashed #e2e8f0;
             padding-top: 8px;
+            flex-wrap: wrap;
+            gap: 4px;
         }
 
         .week-status-badge {
@@ -165,6 +173,11 @@
         .week-status-badge.in-progress {
             background: #f1f5f9;
             color: #475569;
+        }
+
+        .week-status-badge.hidden-tag {
+            background: #fee2e2;
+            color: #b91c1c;
         }
 
         .week-mini-photo {
@@ -304,6 +317,12 @@
             background: #fef3c7;
             color: #92400e;
             border-color: #fcd34d;
+        }
+
+        .btn.admin-vis-btn {
+            background: #e0e7ff;
+            color: #3730a3;
+            border-color: #c7d2fe;
         }
 
         .btn.delete {
@@ -866,7 +885,6 @@
             { id: "jakub_bartosinski", name: "Jakub Bartosiński" }
         ];
 
-        // SZABLONY STARTOWE TYGODNI
         const defaultUserPlans = {
             "jakub_rogalski": [
                 { id: "week_0709", week: "Tydzień 07.09 - 13.09", dates: "07.09 - 13.09", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
@@ -927,7 +945,6 @@
             "Brzuszki / Allahy"
         ];
 
-        // STAN APLIKACJI
         let isAdminLoggedIn = sessionStorage.getItem("is_training_admin") === "true";
         let currentUserId = localStorage.getItem("selected_training_user") || "jakub_rogalski";
         let plans = [];
@@ -939,6 +956,118 @@
         let selectedExercisePerPlan = {};
         let noteSaveTimeouts = {};
         let measurementSaveTimeouts = {};
+
+        // 1. SPRAWDZANIE CZY TYDZIEŃ ZAWIERA JAKIEKOLWIEK DANE
+        function isPlanEmpty(planId) {
+            const hasPhoto = cloudData.photos && cloudData.photos[planId];
+            const hasWeightPhoto = cloudData.weightPhotos && cloudData.weightPhotos[planId];
+            if (hasPhoto || hasWeightPhoto) return false;
+
+            const m = (cloudData.bodyMeasurements && cloudData.bodyMeasurements[planId]) || {};
+            if (m.weight || m.waist || m.chest || m.bicep || m.thigh) return false;
+
+            const notes = (cloudData.dailyNotes && cloudData.dailyNotes[planId]) || {};
+            for (let d of daysOfWeek) {
+                if (notes[d] && notes[d].trim().length > 0) return false;
+            }
+
+            const ex = (cloudData.dailyExercises && cloudData.dailyExercises[planId]) || {};
+            for (let d of daysOfWeek) {
+                if (ex[d] && ex[d].length > 0) return false;
+            }
+
+            return true;
+        }
+
+        // 2. PARSOWANIE DATY KOŃCOWEJ I SPRAWDZENIE PRZEDAWNIENIA (> 7 DNI)
+        function isPlanExpiredMoreThanWeek(datesStr) {
+            if (!datesStr) return false;
+            const parts = datesStr.split("-");
+            if (parts.length < 2) return false;
+
+            const endPart = parts[1].trim(); // np. "06.09"
+            const endSub = endPart.split(".");
+            if (endSub.length < 2) return false;
+
+            const day = parseInt(endSub[0], 10);
+            const month = parseInt(endSub[1], 10) - 1;
+
+            const now = new Date();
+            const year = now.getFullYear();
+
+            const endDate = new Date(year, month, day, 23, 59, 59);
+            const diffMs = now.getTime() - endDate.getTime();
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+            return diffDays > 7;
+        }
+
+        // 3. AUTOMATYCZNE GENEROWANIE TYGODNI NA NASTĘPNY MIESIĄC PO 15. DNIU
+        function autoGenerateNextMonthWeeks() {
+            const now = new Date();
+            const currentDayOfMonth = now.getDate();
+
+            if (currentDayOfMonth <= 15) return; // Tworzymy tylko od 16 dnia miesiąca
+
+            const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            const nextYear = nextMonthDate.getFullYear();
+            const nextMonth = nextMonthDate.getMonth();
+
+            let d = new Date(nextYear, nextMonth, 1);
+            let mondays = [];
+
+            // Szukamy pierwszego poniedziałku w miesiącu lub poniedziałku z końcówki poprzedniego
+            const dayOfWeek = d.getDay();
+            const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+            let currentMonday = new Date(d);
+            currentMonday.setDate(d.getDate() + diffToMonday);
+
+            while (true) {
+                let sunday = new Date(currentMonday);
+                sunday.setDate(currentMonday.getDate() + 6);
+
+                // Sprawdzamy czy ten tydzień zahacza o następny miesiąc
+                if (currentMonday.getMonth() === nextMonth || sunday.getMonth() === nextMonth) {
+                    mondays.push({ monday: new Date(currentMonday), sunday: new Date(sunday) });
+                }
+
+                currentMonday.setDate(currentMonday.getDate() + 7);
+                if (currentMonday.getMonth() > nextMonth && currentMonday.getFullYear() >= nextYear) {
+                    break;
+                }
+            }
+
+            const pad = (n) => n < 10 ? '0' + n : n;
+            let newlyAdded = false;
+
+            mondays.forEach(w => {
+                const mDay = pad(w.monday.getDate());
+                const mMonth = pad(w.monday.getMonth() + 1);
+                const sDay = pad(w.sunday.getDate());
+                const sMonth = pad(w.sunday.getMonth() + 1);
+
+                const weekId = `week_${mDay}${mMonth}`;
+                const datesLabel = `${mDay}.${mMonth} - ${sDay}.${sMonth}`;
+                const weekLabel = `Tydzień ${datesLabel}`;
+
+                const exists = plans.some(p => p.id === weekId || p.dates === datesLabel);
+                if (!exists) {
+                    // Dodajemy na początek listy
+                    plans.unshift({
+                        id: weekId,
+                        week: weekLabel,
+                        dates: datesLabel,
+                        url: "",
+                        visibleToClient: true
+                    });
+                    newlyAdded = true;
+                }
+            });
+
+            if (newlyAdded) {
+                saveCloudData();
+            }
+        }
 
         function handleUserSelectChange(value) {
             if (value === "__admin__") {
@@ -1055,19 +1184,15 @@
             return null;
         }
 
-        // POBIERANIE DANYCH Z FIREBASE
         async function loadCloudData() {
             try {
                 let response = await fetch(`${FIREBASE_BASE_URL}/users/${currentUserId}.json`);
                 let data = await response.json();
 
-                // Migracja starej bazy dla konta Jakub Rogalski
                 if (!data && currentUserId === "jakub_rogalski") {
                     const legacyResponse = await fetch(`${FIREBASE_BASE_URL}/data.json`);
                     const legacyData = await legacyResponse.json();
-                    if (legacyData) {
-                        data = legacyData;
-                    }
+                    if (legacyData) data = legacyData;
                 }
 
                 if (data) {
@@ -1088,6 +1213,7 @@
                 }
 
                 plans = cloudData.plans;
+                autoGenerateNextMonthWeeks();
                 renderView();
             } catch (error) {
                 console.error("Błąd pobierania danych użytkownika:", error);
@@ -1122,26 +1248,52 @@
             }
         }
 
-        // WIDOK SIATKI
+        // WIDOK SIATKI Z REGUŁAMI UKRYWANIA
         function renderOverviewGrid(container) {
             const grid = document.createElement('div');
             grid.className = 'weeks-overview-grid';
 
-            if (plans.length === 0) {
-                grid.innerHTML = `<div style="grid-column: span 2; text-align: center; color: #64748b; padding: 20px;">Brak przypisanych tygodni dla tego profilu.</div>`;
+            let visiblePlans = [];
+
+            plans.forEach(plan => {
+                const rawDates = plan.dates || plan.week.replace("Tydzień ", "");
+                const isExpiredEmpty = isPlanExpiredMoreThanWeek(rawDates) && isPlanEmpty(plan.id);
+
+                // Jeśli Admin ustawił wymuszenie ukrycia/widoczności:
+                let isHiddenForClient = plan.visibleToClient === false || (plan.visibleToClient !== true && isExpiredEmpty);
+
+                if (!isAdminLoggedIn) {
+                    if (!isHiddenForClient) {
+                        visiblePlans.push({ plan, isHiddenForClient: false });
+                    }
+                } else {
+                    // Admin widzi wszystkie, ale z oznaczeniem
+                    visiblePlans.push({ plan, isHiddenForClient });
+                }
+            });
+
+            if (visiblePlans.length === 0) {
+                grid.innerHTML = `<div style="grid-column: span 2; text-align: center; color: #64748b; padding: 20px;">Brak aktywnych tygodni dla tego profilu.</div>`;
                 container.appendChild(grid);
                 return;
             }
 
-            plans.forEach(plan => {
+            visiblePlans.forEach(({ plan, isHiddenForClient }) => {
                 const isCompleted = cloudData.statuses && cloudData.statuses[plan.id] === true;
                 const photoData = cloudData.photos && cloudData.photos[plan.id];
                 const rawDates = plan.dates || plan.week.replace("Tydzień ", "");
                 const monthTitle = getMonthLabelFromDates(rawDates);
 
                 const card = document.createElement('div');
-                card.className = `week-thumb-card ${isCompleted ? 'completed' : ''}`;
+                card.className = `week-thumb-card ${isCompleted ? 'completed' : ''} ${isHiddenForClient ? 'admin-hidden' : ''}`;
                 card.onclick = () => openWeekDetails(plan.id);
+
+                let badgeHtml = '';
+                if (isHiddenForClient && isAdminLoggedIn) {
+                    badgeHtml = `<span class="week-status-badge hidden-tag">Ukryty 👁️‍🗨️</span>`;
+                } else {
+                    badgeHtml = `<span class="week-status-badge ${isCompleted ? 'done' : 'in-progress'}">${isCompleted ? '✅ Zrobiony' : '⏳ W trakcie'}</span>`;
+                }
 
                 card.innerHTML = `
                     <div class="week-thumb-header">
@@ -1150,9 +1302,7 @@
                     </div>
 
                     <div class="week-thumb-footer">
-                        <span class="week-status-badge ${isCompleted ? 'done' : 'in-progress'}">
-                            ${isCompleted ? '✅ Zrobiony' : '⏳ W trakcie'}
-                        </span>
+                        ${badgeHtml}
                         ${photoData ? `<img src="${photoData}" class="week-mini-photo" alt="Progres">` : ''}
                     </div>
                 `;
@@ -1174,7 +1324,6 @@
             renderView();
         }
 
-        // EDYCJA LINKU PDF PRZEZ ADMINA
         async function editPlanUrl(planId) {
             const plan = plans.find(p => p.id === planId);
             if (!plan) return;
@@ -1182,7 +1331,6 @@
             const newUrl = prompt("Wklej link do planu treningowego PDF (Google Drive):", plan.url || "");
             if (newUrl !== null) {
                 let formattedUrl = newUrl.trim();
-                // Automatyczna konwersja linku Google Drive na /preview
                 if (formattedUrl.includes("drive.google.com") && formattedUrl.includes("/view")) {
                     formattedUrl = formattedUrl.replace(/\/view.*$/, "/preview");
                 }
@@ -1192,7 +1340,20 @@
             }
         }
 
-        // WIDOK POJEDYNCZEGO TYGODNIA
+        async function togglePlanVisibilityByAdmin(planId) {
+            const plan = plans.find(p => p.id === planId);
+            if (!plan) return;
+
+            const rawDates = plan.dates || plan.week.replace("Tydzień ", "");
+            const currentAutoHidden = isPlanExpiredMoreThanWeek(rawDates) && isPlanEmpty(plan.id);
+
+            let currentVal = (plan.visibleToClient !== undefined) ? plan.visibleToClient : !currentAutoHidden;
+            plan.visibleToClient = !currentVal;
+
+            await saveCloudData();
+            renderView();
+        }
+
         function renderSingleWeekView(container, planId) {
             const plan = plans.find(p => p.id === planId);
             if (!plan) return returnToOverview();
@@ -1305,6 +1466,10 @@
             const hasNoteContent = currentDayNote.trim().length > 0;
             const hasPdfUrl = plan.url && plan.url.trim().length > 0;
 
+            const rawDates = plan.dates || plan.week.replace("Tydzień ", "");
+            const currentAutoHidden = isPlanExpiredMoreThanWeek(rawDates) && isPlanEmpty(plan.id);
+            const isCurrentlyVisible = (plan.visibleToClient !== undefined) ? plan.visibleToClient : !currentAutoHidden;
+
             card.innerHTML = `
                 <div class="card-header">
                     <div>
@@ -1315,7 +1480,10 @@
                     </div>
 
                     <div class="header-actions">
-                        ${isAdminLoggedIn ? `<button class="btn admin-link-btn" onclick="editPlanUrl('${plan.id}')">🔗 Link PDF</button>` : ''}
+                        ${isAdminLoggedIn ? `
+                            <button class="btn admin-link-btn" onclick="editPlanUrl('${plan.id}')">🔗 Link PDF</button>
+                            <button class="btn admin-vis-btn" onclick="togglePlanVisibilityByAdmin('${plan.id}')">${isCurrentlyVisible ? '👁️ Widoczny' : '🚫 Ukryty'}</button>
+                        ` : ''}
                         <button class="btn pdf-export" onclick="generateWeekPdf('${plan.id}')" title="Wygeneruj raport PDF">
                             📄 Raport PDF
                         </button>
@@ -1732,7 +1900,7 @@
 
         async function removeExercise(planId, day, exIndex) {
             cloudData.dailyExercises[planId][day].splice(exIndex, 1);
-            renderView();
+            renderPlans();
             await saveCloudData();
         }
 
