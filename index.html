@@ -22,14 +22,15 @@
             position: sticky;
             top: 0;
             z-index: 50;
-            background: rgba(248, 250, 252, 0.88);
+            background: rgba(248, 250, 252, 0.92);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             margin: 0 -16px 16px -16px;
-            padding: 8px 16px 6px 16px;
+            padding: 8px 16px 10px 16px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            gap: 8px;
             border-bottom: 1px solid rgba(226, 232, 240, 0.6);
         }
 
@@ -38,6 +39,34 @@
             width: 90%;
             height: auto;
             display: block;
+        }
+
+        /* PASEK WYBORU UŻYTKOWNIKA */
+        .user-switcher-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 4px 10px;
+            border-radius: 999px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .user-switcher-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .user-switcher-select {
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            outline: none;
+            cursor: pointer;
         }
 
         /* SIATKA KAFELKÓW NA STRONIE GŁÓWNEJ */
@@ -729,6 +758,13 @@
 
     <div class="header-container">
         <canvas id="transparentLogoCanvas"></canvas>
+        <div class="user-switcher-bar">
+            <span class="user-switcher-label">👤 Profil:</span>
+            <select id="userSelect" class="user-switcher-select" onchange="switchUser(this.value)">
+                <option value="jakub_rogalski">Jakub Rogalski</option>
+                <option value="jakub_bartosinski">Jakub Bartosiński</option>
+            </select>
+        </div>
     </div>
 
     <div id="appContainer"></div>
@@ -788,33 +824,30 @@
         }
         window.addEventListener('DOMContentLoaded', renderTransparentLogo);
 
-        const FIREBASE_URL = "https://plan-treningowy-efc6d-default-rtdb.firebaseio.com/";
+        const FIREBASE_BASE_URL = "https://plan-treningowy-efc6d-default-rtdb.firebaseio.com";
 
-        const plans = [
-            { id: "week_0709", week: "Tydzień 07.09 - 13.09", dates: "07.09 - 13.09", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
-            { id: "week_3108", week: "Tydzień 31.08 - 06.09", dates: "31.08 - 06.09", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
-            { id: "week_2408", week: "Tydzień 24.08 - 30.08", dates: "24.08 - 30.08", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
-            { id: "week_1708", week: "Tydzień 17.08 - 23.08", dates: "17.08 - 23.08", url: "https://drive.google.com/file/d/1p8z3edTdXQkY-hO_jiSdlxd2xpFOsDjN/preview" },
-            { id: "week_1008", week: "Tydzień 10.08 - 16.08", dates: "10.08 - 16.08", url: "https://drive.google.com/file/d/1hYGXivHinwIpCMWCDC0pESePvVgAahC0/preview" },
-            { id: "week_0408", week: "Tydzień 04.08 - 09.08", dates: "04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
-        ];
-
-        const monthNames = {
-            "01": "Styczeń",
-            "02": "Luty",
-            "03": "Marzec",
-            "04": "Kwiecień",
-            "05": "Maj",
-            "06": "Czerwiec",
-            "07": "Lipiec",
-            "08": "Sierpień",
-            "09": "Wrzesień",
-            "10": "Październik",
-            "11": "Listopad",
-            "12": "Grudzień"
+        // BAZA PLANÓW DLA POSZCZEGÓLNYCH PROFILI
+        const userPlansConfig = {
+            "jakub_rogalski": [
+                { id: "week_0709", week: "Tydzień 07.09 - 13.09", dates: "07.09 - 13.09", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
+                { id: "week_3108", week: "Tydzień 31.08 - 06.09", dates: "31.08 - 06.09", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
+                { id: "week_2408", week: "Tydzień 24.08 - 30.08", dates: "24.08 - 30.08", url: "https://drive.google.com/file/d/15ECyjKWWpgq8UriEgO8zCrfr4nbi1wiW/preview" },
+                { id: "week_1708", week: "Tydzień 17.08 - 23.08", dates: "17.08 - 23.08", url: "https://drive.google.com/file/d/1p8z3edTdXQkY-hO_jiSdlxd2xpFOsDjN/preview" },
+                { id: "week_1008", week: "Tydzień 10.08 - 16.08", dates: "10.08 - 16.08", url: "https://drive.google.com/file/d/1hYGXivHinwIpCMWCDC0pESePvVgAahC0/preview" },
+                { id: "week_0408", week: "Tydzień 04.08 - 09.08", dates: "04.08 - 09.08", url: "https://drive.google.com/file/d/1bzRxy2ZUphxmYaUB3KT_oKOGphFJ5PB1/preview" }
+            ],
+            "jakub_bartosinski": [
+                { id: "week_0709_jb", week: "Tydzień 07.09 - 13.09", dates: "07.09 - 13.09", url: "" },
+                { id: "week_3108_jb", week: "Tydzień 31.08 - 06.09", dates: "31.08 - 06.09", url: "" }
+            ]
         };
 
-        // Automatyczne wyznaczanie nazwy miesiąca na podstawie zakresu dat
+        const monthNames = {
+            "01": "Styczeń", "02": "Luty", "03": "Marzec", "04": "Kwiecień",
+            "05": "Maj", "06": "Czerwiec", "07": "Lipiec", "08": "Sierpień",
+            "09": "Wrzesień", "10": "Październik", "11": "Listopad", "12": "Grudzień"
+        };
+
         function getMonthLabelFromDates(datesStr) {
             if (!datesStr) return "Miesiąc";
             const matches = datesStr.match(/\.(\d{2})/g);
@@ -826,11 +859,7 @@
             const name1 = monthNames[m1] || m1;
             const name2 = monthNames[m2] || m2;
 
-            if (m1 === m2) {
-                return name1;
-            } else {
-                return `${name1} / ${name2}`;
-            }
+            return m1 === m2 ? name1 : `${name1} / ${name2}`;
         }
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
@@ -858,6 +887,9 @@
             "Brzuszki / Allahy"
         ];
 
+        // ZARZĄDZANIE PROFILEM
+        let currentUserId = localStorage.getItem("selected_training_user") || "jakub_rogalski";
+        let plans = userPlansConfig[currentUserId] || [];
         let cloudData = { statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {}, bodyMeasurements: {} };
         let activeSelectedPlanId = null;
         let currentPhotoType = null;
@@ -866,6 +898,16 @@
         let selectedExercisePerPlan = {};
         let noteSaveTimeouts = {};
         let measurementSaveTimeouts = {};
+
+        function switchUser(userId) {
+            currentUserId = userId;
+            localStorage.setItem("selected_training_user", userId);
+            plans = userPlansConfig[currentUserId] || [];
+            activeSelectedPlanId = null;
+            activeDayKey = {};
+            activeMeasurementsKey = {};
+            loadCloudData();
+        }
 
         function getPreviousWeekMeasurement(currentPlanId, field) {
             if (!cloudData.bodyMeasurements) return null;
@@ -931,10 +973,28 @@
             return null;
         }
 
+        // POBIERANIE DANYCH Z AUTOMATYCZNĄ MIGRACJĄ TWOJEJ HISTORII
         async function loadCloudData() {
             try {
-                const response = await fetch(`${FIREBASE_URL}/data.json`);
-                const data = await response.json();
+                // 1. Próba pobrania danych profilu
+                let response = await fetch(`${FIREBASE_BASE_URL}/users/${currentUserId}.json`);
+                let data = await response.json();
+
+                // 2. Jeśli to profil Jakub Rogalski i gałąź jest jeszcze pusta, migrujemy stare dane z /data.json
+                if (!data && currentUserId === "jakub_rogalski") {
+                    const legacyResponse = await fetch(`${FIREBASE_BASE_URL}/data.json`);
+                    const legacyData = await legacyResponse.json();
+                    if (legacyData) {
+                        data = legacyData;
+                        // Zapis do nowej struktury profilu
+                        await fetch(`${FIREBASE_BASE_URL}/users/${currentUserId}.json`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                    }
+                }
+
                 if (data) {
                     cloudData = {
                         statuses: data.statuses || {},
@@ -944,26 +1004,32 @@
                         dailyExercises: data.dailyExercises || {},
                         bodyMeasurements: data.bodyMeasurements || {}
                     };
+                } else {
+                    cloudData = { statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {}, bodyMeasurements: {} };
                 }
+
                 renderView();
             } catch (error) {
-                console.error("Błąd pobierania z bazy:", error);
+                console.error("Błąd pobierania danych użytkownika:", error);
             }
         }
 
         async function saveCloudData() {
             try {
-                await fetch(`${FIREBASE_URL}/data.json`, {
+                await fetch(`${FIREBASE_BASE_URL}/users/${currentUserId}.json`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(cloudData)
                 });
             } catch (error) {
-                console.error("Błąd zapisu do bazy:", error);
+                console.error("Błąd zapisu danych użytkownika:", error);
             }
         }
 
         function renderView() {
+            const selectEl = document.getElementById("userSelect");
+            if (selectEl) selectEl.value = currentUserId;
+
             const container = document.getElementById('appContainer');
             container.innerHTML = '';
 
@@ -974,10 +1040,16 @@
             }
         }
 
-        // WIDOK 1: SIATKA Z NAZWAMI MIESIĘCY
+        // WIDOK 1: SIATKA KAFELKÓW
         function renderOverviewGrid(container) {
             const grid = document.createElement('div');
             grid.className = 'weeks-overview-grid';
+
+            if (plans.length === 0) {
+                grid.innerHTML = `<div style="grid-column: span 2; text-align: center; color: #64748b; padding: 20px;">Brak przypisanych tygodni dla tego profilu.</div>`;
+                container.appendChild(grid);
+                return;
+            }
 
             plans.forEach(plan => {
                 const isCompleted = cloudData.statuses && cloudData.statuses[plan.id] === true;
@@ -1020,7 +1092,7 @@
             renderView();
         }
 
-        // WIDOK 2: DETALE WYBRANEGO TYGODNIA
+        // WIDOK 2: DETALE TYGODNIA
         function renderSingleWeekView(container, planId) {
             const plan = plans.find(p => p.id === planId);
             if (!plan) return returnToOverview();
@@ -1479,9 +1551,7 @@
 
         function toggleCustomDropdown(planId) {
             const box = document.getElementById(`optionsBox_${planId}`);
-            if (box) {
-                box.classList.toggle('open');
-            }
+            if (box) box.classList.toggle('open');
         }
 
         function selectCustomOption(planId, exName) {
@@ -1554,7 +1624,7 @@
 
         async function removeExercise(planId, day, exIndex) {
             cloudData.dailyExercises[planId][day].splice(exIndex, 1);
-            renderPlans();
+            renderView();
             await saveCloudData();
         }
 
