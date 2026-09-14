@@ -82,9 +82,10 @@
             align-items: center;
             gap: 8px;
             width: 100%;
-            max-width: 380px;
+            max-width: 480px;
             box-sizing: border-box;
             justify-content: space-between;
+            flex-wrap: wrap;
         }
 
         .weeks-overview-grid {
@@ -233,8 +234,8 @@
             padding: 20px; 
             border-radius: 18px; 
             display: flex; 
-            flex-direction: column;
-            gap: 14px;
+            flex-direction: column; 
+            gap: 14px; 
             box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
         }
 
@@ -765,7 +766,7 @@
             top: 0; left: 0; 
             width: 100%; height: 100%; 
             background: rgba(15, 23, 42, 0.7); 
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px); 
             flex-direction: column; 
             z-index: 1000;
         }
@@ -817,7 +818,10 @@
 
         <div id="adminBanner" class="admin-banner">
             <span>🛠️ <strong>Tryb Trenera</strong> — edycja: <select id="adminTargetSelect" onchange="switchAdminTarget(this.value)" style="border: 1px solid #d97706; background: #ffffff; border-radius: 6px; font-weight:700; font-size:12px; padding: 2px 4px;"></select></span>
-            <button class="btn" style="padding: 2px 6px; font-size: 11px; background: #ffffff;" onclick="logoutAdmin()">Wyloguj</button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="btn" style="padding: 3px 8px; font-size: 11px; background: #10b981; color: #ffffff; border-color: #059669; font-weight: 700;" onclick="adminAddNewNextWeek()">➕ Dodaj kolejny tydzień</button>
+                <button class="btn" style="padding: 3px 6px; font-size: 11px; background: #ffffff;" onclick="logoutAdmin()">Wyloguj</button>
+            </div>
         </div>
     </div>
 
@@ -923,6 +927,7 @@
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
         const exerciseOptions = [
+            "Leg Extension (Prostowanie nóg)",
             "Wyciskanie sztangi na ławce poziomej",
             "Wyciskanie hantli na skosie dodatnim",
             "Przysiad ze sztangą",
@@ -950,6 +955,7 @@
         let plans = [];
         let cloudData = { statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {}, bodyMeasurements: {}, plans: [] };
         let activeSelectedPlanId = null;
+        let currentActivePlanId = null;
         let currentPhotoType = null;
         let activeDayKey = {};
         let activeMeasurementsKey = {};
@@ -957,7 +963,6 @@
         let noteSaveTimeouts = {};
         let measurementSaveTimeouts = {};
 
-        // 1. SPRAWDZANIE CZY TYDZIEŃ ZAWIERA JAKIEKOLWIEK DANE
         function isPlanEmpty(planId) {
             const hasPhoto = cloudData.photos && cloudData.photos[planId];
             const hasWeightPhoto = cloudData.weightPhotos && cloudData.weightPhotos[planId];
@@ -979,13 +984,12 @@
             return true;
         }
 
-        // 2. PARSOWANIE DATY KOŃCOWEJ I SPRAWDZENIE PRZEDAWNIENIA (> 7 DNI)
         function isPlanExpiredMoreThanWeek(datesStr) {
             if (!datesStr) return false;
             const parts = datesStr.split("-");
             if (parts.length < 2) return false;
 
-            const endPart = parts[1].trim(); // np. "06.09"
+            const endPart = parts[1].trim();
             const endSub = endPart.split(".");
             if (endSub.length < 2) return false;
 
@@ -1002,71 +1006,66 @@
             return diffDays > 7;
         }
 
-        // 3. AUTOMATYCZNE GENEROWANIE TYGODNI NA NASTĘPNY MIESIĄC PO 15. DNIU
-        function autoGenerateNextMonthWeeks() {
-            const now = new Date();
-            const currentDayOfMonth = now.getDate();
-
-            if (currentDayOfMonth <= 15) return; // Tworzymy tylko od 16 dnia miesiąca
-
-            const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-            const nextYear = nextMonthDate.getFullYear();
-            const nextMonth = nextMonthDate.getMonth();
-
-            let d = new Date(nextYear, nextMonth, 1);
-            let mondays = [];
-
-            // Szukamy pierwszego poniedziałku w miesiącu lub poniedziałku z końcówki poprzedniego
-            const dayOfWeek = d.getDay();
-            const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
-            let currentMonday = new Date(d);
-            currentMonday.setDate(d.getDate() + diffToMonday);
-
-            while (true) {
-                let sunday = new Date(currentMonday);
-                sunday.setDate(currentMonday.getDate() + 6);
-
-                // Sprawdzamy czy ten tydzień zahacza o następny miesiąc
-                if (currentMonday.getMonth() === nextMonth || sunday.getMonth() === nextMonth) {
-                    mondays.push({ monday: new Date(currentMonday), sunday: new Date(sunday) });
-                }
-
-                currentMonday.setDate(currentMonday.getDate() + 7);
-                if (currentMonday.getMonth() > nextMonth && currentMonday.getFullYear() >= nextYear) {
-                    break;
-                }
-            }
-
+        // GENEROWANIE KOLEJNEGO TYGODNIA PRZEZ TRENERA
+        async function adminAddNewNextWeek() {
             const pad = (n) => n < 10 ? '0' + n : n;
-            let newlyAdded = false;
+            let nextMonday, nextSunday;
 
-            mondays.forEach(w => {
-                const mDay = pad(w.monday.getDate());
-                const mMonth = pad(w.monday.getMonth() + 1);
-                const sDay = pad(w.sunday.getDate());
-                const sMonth = pad(w.sunday.getMonth() + 1);
+            if (plans.length > 0 && plans[0].dates) {
+                const parts = plans[0].dates.split("-");
+                if (parts.length >= 2) {
+                    const endPart = parts[1].trim(); // np. "13.09"
+                    const endSub = endPart.split(".");
+                    if (endSub.length >= 2) {
+                        const lastDay = parseInt(endSub[0], 10);
+                        const lastMonth = parseInt(endSub[1], 10) - 1;
+                        const currentYear = new Date().getFullYear();
 
-                const weekId = `week_${mDay}${mMonth}`;
-                const datesLabel = `${mDay}.${mMonth} - ${sDay}.${sMonth}`;
-                const weekLabel = `Tydzień ${datesLabel}`;
+                        // Niedziela poprzedniego tygodnia:
+                        const lastSundayDate = new Date(currentYear, lastMonth, lastDay);
+                        
+                        // Nowy poniedziałek = niedziela + 1 dzień:
+                        nextMonday = new Date(lastSundayDate);
+                        nextMonday.setDate(lastSundayDate.getDate() + 1);
 
-                const exists = plans.some(p => p.id === weekId || p.dates === datesLabel);
-                if (!exists) {
-                    // Dodajemy na początek listy
-                    plans.unshift({
-                        id: weekId,
-                        week: weekLabel,
-                        dates: datesLabel,
-                        url: "",
-                        visibleToClient: true
-                    });
-                    newlyAdded = true;
+                        // Nowa niedziela = poniedziałek + 6 dni:
+                        nextSunday = new Date(nextMonday);
+                        nextSunday.setDate(nextMonday.getDate() + 6);
+                    }
                 }
-            });
-
-            if (newlyAdded) {
-                saveCloudData();
             }
+
+            // Zabezpieczenie fallback, gdyby brakowało planów:
+            if (!nextMonday || isNaN(nextMonday.getTime())) {
+                const now = new Date();
+                const day = now.getDay();
+                const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                nextMonday = new Date(now.setDate(diff));
+                nextSunday = new Date(nextMonday);
+                nextSunday.setDate(nextMonday.getDate() + 6);
+            }
+
+            const mDay = pad(nextMonday.getDate());
+            const mMonth = pad(nextMonday.getMonth() + 1);
+            const sDay = pad(nextSunday.getDate());
+            const sMonth = pad(nextSunday.getMonth() + 1);
+
+            const datesLabel = `${mDay}.${mMonth} - ${sDay}.${sMonth}`;
+            const weekLabel = `Tydzień ${datesLabel}`;
+            const weekId = `week_${mDay}${mMonth}_${Date.now()}`;
+
+            const newPlan = {
+                id: weekId,
+                week: weekLabel,
+                dates: datesLabel,
+                url: "",
+                visibleToClient: true
+            };
+
+            plans.unshift(newPlan);
+            await saveCloudData();
+            renderView();
+            alert(`Pomyślnie dodano nowy tydzień: ${weekLabel}`);
         }
 
         function handleUserSelectChange(value) {
@@ -1213,7 +1212,6 @@
                 }
 
                 plans = cloudData.plans;
-                autoGenerateNextMonthWeeks();
                 renderView();
             } catch (error) {
                 console.error("Błąd pobierania danych użytkownika:", error);
@@ -1248,7 +1246,6 @@
             }
         }
 
-        // WIDOK SIATKI Z REGUŁAMI UKRYWANIA
         function renderOverviewGrid(container) {
             const grid = document.createElement('div');
             grid.className = 'weeks-overview-grid';
@@ -1258,8 +1255,6 @@
             plans.forEach(plan => {
                 const rawDates = plan.dates || plan.week.replace("Tydzień ", "");
                 const isExpiredEmpty = isPlanExpiredMoreThanWeek(rawDates) && isPlanEmpty(plan.id);
-
-                // Jeśli Admin ustawił wymuszenie ukrycia/widoczności:
                 let isHiddenForClient = plan.visibleToClient === false || (plan.visibleToClient !== true && isExpiredEmpty);
 
                 if (!isAdminLoggedIn) {
@@ -1267,7 +1262,6 @@
                         visiblePlans.push({ plan, isHiddenForClient: false });
                     }
                 } else {
-                    // Admin widzi wszystkie, ale z oznaczeniem
                     visiblePlans.push({ plan, isHiddenForClient });
                 }
             });
@@ -1900,7 +1894,7 @@
 
         async function removeExercise(planId, day, exIndex) {
             cloudData.dailyExercises[planId][day].splice(exIndex, 1);
-            renderPlans();
+            renderView();
             await saveCloudData();
         }
 
