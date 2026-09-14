@@ -951,28 +951,34 @@
 
         const daysOfWeek = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 
+        // Pełna, zaktualizowana lista ćwiczeń uwzględniająca nowy plan treningowy
         const exerciseOptions = [
-            "Leg Extension (Prostowanie nóg)",
-            "Wyciskanie sztangi na ławce poziomej",
-            "Wyciskanie hantli na skosie dodatnim",
-            "Przysiad ze sztangą",
-            "Martwy ciąg",
-            "RDL (Rumuński martwy ciąg)",
-            "Wiosłowanie sztangą",
-            "Podciąganie nachwytem",
-            "Podciąganie podchwytem",
-            "Ściąganie w dół na wyciągu",
-            "Suwnica",
-            "Suwnica jednonóż",
-            "Wypady",
-            "Hip-trust",
-            "Face pull",
+            "Przysiad ze sztangą (High Bar)",
+            "Wyciskanie sztangi leżąc",
+            "Wiosłowanie sztangą w opadzie",
+            "Wznosy hantli bokiem w siadzie",
+            "Rumuński Martwy Ciąg (RDL)",
             "Wyciskanie żołnierskie (OHP)",
+            "Ściąganie drążka (Lat Pulldown)",
+            "Hip Thrust ze sztangą",
+            "Facepull na wyciągu",
+            "Wykroki chodzone z hantlami",
+            "Wyciskanie hantli na skosie dodatnim",
+            "Wiosłowanie hantlem w oparciu",
+            "Wznosy ramion bokiem (wyciąg / hantle)",
+            "Spięcia brzucha na maszynie / Allaszki",
             "Uginanie ramion ze sztangą (Biceps)",
             "Prostowanie ramion na wyciągu (Triceps)",
-            "Wznosy bokiem z hantlami (Barki)",
+            "Leg Extension (Prostowanie nóg)",
+            "Martwy ciąg",
+            "Podciąganie nachwytem",
+            "Podciąganie podchwytem",
+            "Suwnica",
+            "Suwnica jednonóż",
             "Wspięcia na palce (Łydki)",
-            "Brzuszki / Allahy"
+            "Bieżnia: Marsz pod górę (Incline Walk)",
+            "Bieżnia: Interwał (Marsz + Trucht)",
+            "Bieżnia: Ciągły trucht (Easy Jog)"
         ];
 
         let isAdminLoggedIn = sessionStorage.getItem("is_training_admin") === "true";
@@ -999,7 +1005,6 @@
             selectEl.innerHTML = html;
         }
 
-        // TWORZENIE NOWEGO PROFILU PODOPIECZNEGO
         async function adminCreateNewProfile() {
             if (!isAdminLoggedIn) return;
 
@@ -1007,7 +1012,6 @@
             if (!nameInput || nameInput.trim() === "") return;
 
             const fullName = nameInput.trim();
-            // Generujemy ID bez polskich znaków i spacji
             const generatedId = fullName
                 .toLowerCase()
                 .replace(/ą/g, 'a').replace(/ć/g, 'c').replace(/ę/g, 'e')
@@ -1020,14 +1024,12 @@
             availableUsers.push(newUser);
             localStorage.setItem("app_available_users", JSON.stringify(availableUsers));
 
-            // Przełączamy od razu na nowy profil
             currentUserId = generatedId;
             localStorage.setItem("selected_training_user", generatedId);
             activeSelectedPlanId = null;
             activeDayKey = {};
             activeMeasurementsKey = {};
 
-            // Inicjalizujemy pusty stan dla nowego profilu
             cloudData = { 
                 statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {}, bodyMeasurements: {}, plans: [] 
             };
@@ -1054,16 +1056,13 @@
             }
 
             try {
-                // 1. Usunięcie profilu z Firebase
                 await fetch(`${FIREBASE_BASE_URL}/users/${currentUserId}.json`, {
                     method: 'DELETE'
                 });
 
-                // 2. Usunięcie z listy lokalnej
                 availableUsers = availableUsers.filter(u => u.id !== currentUserId);
                 localStorage.setItem("app_available_users", JSON.stringify(availableUsers));
 
-                // 3. Przełączenie na kolejnego podopiecznego
                 if (availableUsers.length > 0) {
                     currentUserId = availableUsers[0].id;
                 } else {
