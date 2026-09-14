@@ -47,7 +47,7 @@
             gap: 8px;
             background: #ffffff;
             border: 1px solid #cbd5e1;
-            padding: 4px 12px;
+            padding: 4px 14px;
             border-radius: 999px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             flex-wrap: wrap;
@@ -70,46 +70,37 @@
             cursor: pointer;
         }
 
-        .btn-user-delete {
-            display: none;
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
-            color: #e11d48;
-            padding: 3px 8px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.15s ease;
-        }
-
-        .btn-user-delete:hover {
-            background: #ffe4e6;
-            color: #be123c;
-        }
-
-        .btn-user-delete:active {
-            transform: scale(0.95);
-        }
-
         .admin-banner {
             display: none;
             background: #fef3c7;
             border: 1px solid #fde68a;
             color: #92400e;
-            padding: 6px 12px;
-            border-radius: 10px;
+            padding: 8px 12px;
+            border-radius: 12px;
             font-size: 12px;
             font-weight: 600;
             align-items: center;
             gap: 8px;
             width: 100%;
-            max-width: 480px;
+            max-width: 580px;
             box-sizing: border-box;
-            justify-content: space-between;
             flex-wrap: wrap;
+        }
+
+        .admin-actions-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .admin-logout-btn {
+            margin-left: auto;
+            padding: 4px 8px;
+            font-size: 11px;
+            background: #ffffff;
+            color: #475569;
+            border: 1px solid #cbd5e1;
         }
 
         .weeks-overview-grid {
@@ -836,18 +827,23 @@
             <select id="userSelect" class="user-switcher-select" onchange="handleUserSelectChange(this.value)">
                 <!-- Wypełniane dynamicznie -->
             </select>
-            <!-- Widoczny TYLKO dla zalogowanego Trenera -->
-            <button id="deleteUserBtn" class="btn-user-delete" onclick="deleteCurrentProfile()" title="Usuń profil">
-                🗑️ Usuń profil
-            </button>
         </div>
 
         <div id="adminBanner" class="admin-banner">
             <span>🛠️ <strong>Tryb Trenera</strong> — edycja: <select id="adminTargetSelect" onchange="switchAdminTarget(this.value)" style="border: 1px solid #d97706; background: #ffffff; border-radius: 6px; font-weight:700; font-size:12px; padding: 2px 4px;"></select></span>
-            <div style="display: flex; gap: 6px; align-items: center;">
-                <button class="btn" style="padding: 3px 8px; font-size: 11px; background: #10b981; color: #ffffff; border-color: #059669; font-weight: 700;" onclick="adminAddNewNextWeek()">➕ Dodaj kolejny tydzień</button>
-                <button class="btn" style="padding: 3px 6px; font-size: 11px; background: #ffffff;" onclick="logoutAdmin()">Wyloguj</button>
+            
+            <div class="admin-actions-group">
+                <button class="btn" style="padding: 3px 8px; font-size: 11px; background: #10b981; color: #ffffff; border-color: #059669; font-weight: 700;" onclick="adminAddNewNextWeek()">
+                    ➕ Dodaj kolejny tydzień
+                </button>
+                <button class="btn" style="padding: 3px 8px; font-size: 11px; background: #fff1f2; color: #e11d48; border-color: #fecdd3; font-weight: 700;" onclick="deleteCurrentProfile()">
+                    🗑️ Usuń profil
+                </button>
             </div>
+
+            <button class="btn admin-logout-btn" onclick="logoutAdmin()">
+                Wyloguj
+            </button>
         </div>
     </div>
 
@@ -998,12 +994,6 @@
             ).join("");
             html += `<option value="__admin__" ${isAdminLoggedIn ? 'selected' : ''}>🔒 Panel Admina (Trener)</option>`;
             selectEl.innerHTML = html;
-
-            // Przycisk usuwania profilu jest widoczny TYLKO i wyłącznie dla zalogowanego Trenera
-            const deleteBtn = document.getElementById("deleteUserBtn");
-            if (deleteBtn) {
-                deleteBtn.style.display = isAdminLoggedIn ? "inline-flex" : "none";
-            }
         }
 
         async function deleteCurrentProfile() {
