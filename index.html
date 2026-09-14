@@ -47,7 +47,7 @@
             gap: 8px;
             background: #ffffff;
             border: 1px solid #cbd5e1;
-            padding: 4px 12px;
+            padding: 4px 10px 4px 12px;
             border-radius: 999px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             flex-wrap: wrap;
@@ -68,6 +68,30 @@
             color: #0f172a;
             outline: none;
             cursor: pointer;
+        }
+
+        .btn-user-delete {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #e11d48;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-user-delete:hover {
+            background: #ffe4e6;
+            color: #be123c;
+        }
+
+        .btn-user-delete:active {
+            transform: scale(0.95);
         }
 
         .admin-banner {
@@ -810,10 +834,11 @@
         <div class="user-switcher-bar">
             <span class="user-switcher-label">👤 Profil:</span>
             <select id="userSelect" class="user-switcher-select" onchange="handleUserSelectChange(this.value)">
-                <option value="jakub_rogalski">Jakub Rogalski</option>
-                <option value="jakub_bartosinski">Jakub Bartosiński</option>
-                <option value="__admin__">🔒 Panel Admina (Trener)</option>
+                <!-- Wypełniane dynamicznie przez renderUserSelect() -->
             </select>
+            <button id="deleteUserBtn" class="btn-user-delete" onclick="deleteCurrentProfile()" title="Usuń bieżący profil">
+                🗑️ Usuń
+            </button>
         </div>
 
         <div id="adminBanner" class="admin-banner">
@@ -884,7 +909,7 @@
 
         const FIREBASE_BASE_URL = "https://plan-treningowy-efc6d-default-rtdb.firebaseio.com";
 
-        const availableUsers = [
+        let availableUsers = JSON.parse(localStorage.getItem("app_available_users")) || [
             { id: "jakub_rogalski", name: "Jakub Rogalski" },
             { id: "jakub_bartosinski", name: "Jakub Bartosiński" }
         ];
@@ -963,6 +988,68 @@
         let noteSaveTimeouts = {};
         let measurementSaveTimeouts = {};
 
+        function renderUserSelect() {
+            const selectEl = document.getElementById("userSelect");
+            if (!selectEl) return;
+
+            let html = availableUsers.map(u => 
+                `<option value="${u.id}" ${u.id === currentUserId ? 'selected' : ''}>${u.name}</option>`
+            ).join("");
+            html += `<option value="__admin__" ${isAdminLoggedIn ? 'selected' : ''}>🔒 Panel Admina (Trener)</option>`;
+            selectEl.innerHTML = html;
+
+            const deleteBtn = document.getElementById("deleteUserBtn");
+            if (deleteBtn) {
+                deleteBtn.style.display = isAdminLoggedIn ? "none" : "inline-flex";
+            }
+        }
+
+        async function deleteCurrentProfile() {
+            if (isAdminLoggedIn) {
+                alert("Nie można usunąć profilu administratora!");
+                return;
+            }
+
+            const userToDelete = availableUsers.find(u => u.id === currentUserId);
+            const userName = userToDelete ? userToDelete.name : currentUserId;
+
+            if (!confirm(`Czy na pewno chcesz bezpowrotnie usunąć profil "${userName}" wraz ze wszystkimi zapisanymi treningami i pomiarami w chmurze?`)) {
+                return;
+            }
+
+            try {
+                // 1. Usunięcie profilu z bazy Firebase
+                await fetch(`${FIREBASE_BASE_URL}/users/${currentUserId}.json`, {
+                    method: 'DELETE'
+                });
+
+                // 2. Usunięcie użytkownika z listy lokalnej
+                availableUsers = availableUsers.filter(u => u.id !== currentUserId);
+                localStorage.setItem("app_available_users", JSON.stringify(availableUsers));
+
+                // 3. Przełączenie na innego użytkownika lub zresetowanie
+                if (availableUsers.length > 0) {
+                    currentUserId = availableUsers[0].id;
+                } else {
+                    currentUserId = "nowy_profil";
+                    availableUsers.push({ id: "nowy_profil", name: "Domyślny Użytkownik" });
+                    localStorage.setItem("app_available_users", JSON.stringify(availableUsers));
+                }
+
+                localStorage.setItem("selected_training_user", currentUserId);
+                activeSelectedPlanId = null;
+                activeDayKey = {};
+                activeMeasurementsKey = {};
+
+                renderUserSelect();
+                await loadCloudData();
+                alert(`Profil "${userName}" został pomyślnie usunięty.`);
+            } catch (error) {
+                console.error("Błąd podczas usuwania profilu:", error);
+                alert("Wystąpił błąd podczas usuwania profilu z bazy danych.");
+            }
+        }
+
         function isPlanEmpty(planId) {
             const hasPhoto = cloudData.photos && cloudData.photos[planId];
             const hasWeightPhoto = cloudData.weightPhotos && cloudData.weightPhotos[planId];
@@ -1006,7 +1093,6 @@
             return diffDays > 7;
         }
 
-        // GENEROWANIE KOLEJNEGO TYGODNIA PRZEZ TRENERA
         async function adminAddNewNextWeek() {
             const pad = (n) => n < 10 ? '0' + n : n;
             let nextMonday, nextSunday;
@@ -1014,28 +1100,23 @@
             if (plans.length > 0 && plans[0].dates) {
                 const parts = plans[0].dates.split("-");
                 if (parts.length >= 2) {
-                    const endPart = parts[1].trim(); // np. "13.09"
+                    const endPart = parts[1].trim();
                     const endSub = endPart.split(".");
                     if (endSub.length >= 2) {
                         const lastDay = parseInt(endSub[0], 10);
                         const lastMonth = parseInt(endSub[1], 10) - 1;
                         const currentYear = new Date().getFullYear();
 
-                        // Niedziela poprzedniego tygodnia:
                         const lastSundayDate = new Date(currentYear, lastMonth, lastDay);
-                        
-                        // Nowy poniedziałek = niedziela + 1 dzień:
                         nextMonday = new Date(lastSundayDate);
                         nextMonday.setDate(lastSundayDate.getDate() + 1);
 
-                        // Nowa niedziela = poniedziałek + 6 dni:
                         nextSunday = new Date(nextMonday);
                         nextSunday.setDate(nextMonday.getDate() + 6);
                     }
                 }
             }
 
-            // Zabezpieczenie fallback, gdyby brakowało planów:
             if (!nextMonday || isNaN(nextMonday.getTime())) {
                 const now = new Date();
                 const day = now.getDay();
@@ -1074,6 +1155,7 @@
                 if (pass === "1234") {
                     isAdminLoggedIn = true;
                     sessionStorage.setItem("is_training_admin", "true");
+                    renderUserSelect();
                     setupAdminUI();
                     renderView();
                 } else {
@@ -1086,6 +1168,7 @@
                 activeSelectedPlanId = null;
                 activeDayKey = {};
                 activeMeasurementsKey = {};
+                renderUserSelect();
                 loadCloudData();
             }
         }
@@ -1115,6 +1198,7 @@
             isAdminLoggedIn = false;
             sessionStorage.removeItem("is_training_admin");
             document.getElementById("adminBanner").style.display = "none";
+            renderUserSelect();
             document.getElementById("userSelect").value = currentUserId;
             renderView();
         }
@@ -1233,8 +1317,7 @@
 
         function renderView() {
             setupAdminUI();
-            const selectEl = document.getElementById("userSelect");
-            if (selectEl && !isAdminLoggedIn) selectEl.value = currentUserId;
+            renderUserSelect();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = '';
