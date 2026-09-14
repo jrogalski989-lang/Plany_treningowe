@@ -82,7 +82,7 @@
             align-items: center;
             gap: 8px;
             width: 100%;
-            max-width: 580px;
+            max-width: 650px;
             box-sizing: border-box;
             flex-wrap: wrap;
         }
@@ -836,6 +836,9 @@
                 <button class="btn" style="padding: 3px 8px; font-size: 11px; background: #10b981; color: #ffffff; border-color: #059669; font-weight: 700;" onclick="adminAddNewNextWeek()">
                     ➕ Dodaj kolejny tydzień
                 </button>
+                <button class="btn" style="padding: 3px 8px; font-size: 11px; background: #3b82f6; color: #ffffff; border-color: #2563eb; font-weight: 700;" onclick="adminCreateNewProfile()">
+                    👤 Stwórz profil
+                </button>
                 <button class="btn" style="padding: 3px 8px; font-size: 11px; background: #fff1f2; color: #e11d48; border-color: #fecdd3; font-weight: 700;" onclick="deleteCurrentProfile()">
                     🗑️ Usuń profil
                 </button>
@@ -994,6 +997,47 @@
             ).join("");
             html += `<option value="__admin__" ${isAdminLoggedIn ? 'selected' : ''}>🔒 Panel Admina (Trener)</option>`;
             selectEl.innerHTML = html;
+        }
+
+        // TWORZENIE NOWEGO PROFILU PODOPIECZNEGO
+        async function adminCreateNewProfile() {
+            if (!isAdminLoggedIn) return;
+
+            const nameInput = prompt("Podaj imię i nazwisko nowego podopiecznego:");
+            if (!nameInput || nameInput.trim() === "") return;
+
+            const fullName = nameInput.trim();
+            // Generujemy ID bez polskich znaków i spacji
+            const generatedId = fullName
+                .toLowerCase()
+                .replace(/ą/g, 'a').replace(/ć/g, 'c').replace(/ę/g, 'e')
+                .replace(/ł/g, 'l').replace(/ń/g, 'n').replace(/ó/g, 'o')
+                .replace(/ś/g, 's').replace(/ź/g, 'z').replace(/ż/g, 'z')
+                .replace(/\s+/g, '_')
+                .replace(/[^a-z0-9_]/g, '') + '_' + Date.now().toString().slice(-4);
+
+            const newUser = { id: generatedId, name: fullName };
+            availableUsers.push(newUser);
+            localStorage.setItem("app_available_users", JSON.stringify(availableUsers));
+
+            // Przełączamy od razu na nowy profil
+            currentUserId = generatedId;
+            localStorage.setItem("selected_training_user", generatedId);
+            activeSelectedPlanId = null;
+            activeDayKey = {};
+            activeMeasurementsKey = {};
+
+            // Inicjalizujemy pusty stan dla nowego profilu
+            cloudData = { 
+                statuses: {}, photos: {}, weightPhotos: {}, dailyNotes: {}, dailyExercises: {}, bodyMeasurements: {}, plans: [] 
+            };
+            plans = [];
+
+            await saveCloudData();
+            renderUserSelect();
+            setupAdminUI();
+            renderView();
+            alert(`Pomyślnie utworzono profil podopiecznego: ${fullName}`);
         }
 
         async function deleteCurrentProfile() {
