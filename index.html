@@ -47,7 +47,7 @@
             gap: 8px;
             background: #ffffff;
             border: 1px solid #cbd5e1;
-            padding: 4px 10px 4px 12px;
+            padding: 4px 12px;
             border-radius: 999px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             flex-wrap: wrap;
@@ -71,6 +71,7 @@
         }
 
         .btn-user-delete {
+            display: none;
             background: #fff1f2;
             border: 1px solid #fecdd3;
             color: #e11d48;
@@ -79,7 +80,6 @@
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
-            display: inline-flex;
             align-items: center;
             gap: 4px;
             transition: all 0.15s ease;
@@ -834,10 +834,11 @@
         <div class="user-switcher-bar">
             <span class="user-switcher-label">👤 Profil:</span>
             <select id="userSelect" class="user-switcher-select" onchange="handleUserSelectChange(this.value)">
-                <!-- Wypełniane dynamicznie przez renderUserSelect() -->
+                <!-- Wypełniane dynamicznie -->
             </select>
-            <button id="deleteUserBtn" class="btn-user-delete" onclick="deleteCurrentProfile()" title="Usuń bieżący profil">
-                🗑️ Usuń
+            <!-- Widoczny TYLKO dla zalogowanego Trenera -->
+            <button id="deleteUserBtn" class="btn-user-delete" onclick="deleteCurrentProfile()" title="Usuń profil">
+                🗑️ Usuń profil
             </button>
         </div>
 
@@ -998,36 +999,37 @@
             html += `<option value="__admin__" ${isAdminLoggedIn ? 'selected' : ''}>🔒 Panel Admina (Trener)</option>`;
             selectEl.innerHTML = html;
 
+            // Przycisk usuwania profilu jest widoczny TYLKO i wyłącznie dla zalogowanego Trenera
             const deleteBtn = document.getElementById("deleteUserBtn");
             if (deleteBtn) {
-                deleteBtn.style.display = isAdminLoggedIn ? "none" : "inline-flex";
+                deleteBtn.style.display = isAdminLoggedIn ? "inline-flex" : "none";
             }
         }
 
         async function deleteCurrentProfile() {
-            if (isAdminLoggedIn) {
-                alert("Nie można usunąć profilu administratora!");
+            if (!isAdminLoggedIn) {
+                alert("Tylko trener ma uprawnienia do usuwania profili!");
                 return;
             }
 
             const userToDelete = availableUsers.find(u => u.id === currentUserId);
             const userName = userToDelete ? userToDelete.name : currentUserId;
 
-            if (!confirm(`Czy na pewno chcesz bezpowrotnie usunąć profil "${userName}" wraz ze wszystkimi zapisanymi treningami i pomiarami w chmurze?`)) {
+            if (!confirm(`[PANEL TRENERA] Czy na pewno chcesz trwale usunąć profil "${userName}" wraz ze wszystkimi treningami i pomiarami?`)) {
                 return;
             }
 
             try {
-                // 1. Usunięcie profilu z bazy Firebase
+                // 1. Usunięcie profilu z Firebase
                 await fetch(`${FIREBASE_BASE_URL}/users/${currentUserId}.json`, {
                     method: 'DELETE'
                 });
 
-                // 2. Usunięcie użytkownika z listy lokalnej
+                // 2. Usunięcie z listy lokalnej
                 availableUsers = availableUsers.filter(u => u.id !== currentUserId);
                 localStorage.setItem("app_available_users", JSON.stringify(availableUsers));
 
-                // 3. Przełączenie na innego użytkownika lub zresetowanie
+                // 3. Przełączenie na kolejnego podopiecznego
                 if (availableUsers.length > 0) {
                     currentUserId = availableUsers[0].id;
                 } else {
@@ -1042,11 +1044,12 @@
                 activeMeasurementsKey = {};
 
                 renderUserSelect();
+                setupAdminUI();
                 await loadCloudData();
                 alert(`Profil "${userName}" został pomyślnie usunięty.`);
             } catch (error) {
                 console.error("Błąd podczas usuwania profilu:", error);
-                alert("Wystąpił błąd podczas usuwania profilu z bazy danych.");
+                alert("Wystąpił błąd podczas usuwania danych z chmury.");
             }
         }
 
@@ -1191,6 +1194,7 @@
             localStorage.setItem("selected_training_user", userId);
             document.getElementById("userSelect").value = userId;
             activeSelectedPlanId = null;
+            renderUserSelect();
             loadCloudData();
         }
 
